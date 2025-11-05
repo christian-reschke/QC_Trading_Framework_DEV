@@ -27,7 +27,7 @@ DEPLOYMENT PROJECT: d:\QC\SPY_EMA_Strategy_DEPLOY\
 - Direct push to QuantConnect without conflicts
 
 ==========================================
-DEPLOYMENT WORKFLOW
+DEPLOYMENT WORKFLOW (UPDATED - FUNCTIONAL)
 ==========================================
 
 1. DEVELOP in SPY_EMA_Strategy_DEV:
@@ -36,33 +36,41 @@ DEPLOYMENT WORKFLOW
    - Run local simulations
    - Update documentation
 
-2. DEPLOY via SPY_EMA_Strategy_DEPLOY:
-   - Copy main.py to deployment project
-   - Verify clean encoding (no emojis/special chars)
-   - Push to QuantConnect: lean cloud push --project SPY_EMA_Strategy_DEPLOY
-   - Run cloud backtest: lean cloud backtest SPY_EMA_Strategy_DEPLOY
+2. DEPLOY via MAKEFILE (AUTOMATED):
+   - make copy      # Copy files from DEV to DEPLOY
+   - make push      # Copy + Push to QuantConnect cloud
+   - make backtest  # Run cloud backtest
 
-3. NAMING CONVENTION:
+3. COMMANDS REFERENCE:
+   - make copy: Copy essential files (main.py, config.json, research.ipynb)
+   - make push: Automatic copy + push to QuantConnect (recommended)
+   - make backtest: Run backtest on whatever is currently on QuantConnect
+   - make logs: Process logs for better readability
+
+4. NAMING CONVENTION:
    - Dev Project: [Strategy]_DEV (full development environment)
    - Deploy Project: [Strategy]_DEPLOY (clean QuantConnect deployment)
-   - Cloud Backtest: [Strategy]_[YYYYMMDD]_[Version] (e.g., SPY_EMA_20251105_v1)
+   - Cloud Backtest: Auto-generated names (e.g., "Swimming Yellow Viper")
 
 ==========================================
-QUICK START COMMANDS
+QUICK START COMMANDS (UPDATED - MAKEFILE)
 ==========================================
 
 DEPLOY TO QUANTCONNECT:
 > cd "d:\QC\SPY_EMA_Strategy_DEV"
-> lean cloud push --project .
-> lean cloud backtest . --name "SPY_EMA_Strategy_Test"
+> make push
 
-RUN C# UNIT TESTS:
-> cd "d:\QC\SPY_EMA_Strategy_DEV\tests"
-> dotnet run --project TestRunner.cs
+RUN CLOUD BACKTEST:
+> make backtest
 
-RUN STRATEGY SIMULATION:
-> cd "d:\QC\SPY_EMA_Strategy_DEV\strategies" 
-> dotnet run --project SPYEMAStrategy.cs
+COPY FILES ONLY:
+> make copy
+
+PROCESS LOGS:
+> make logs
+
+LOCAL TESTING:
+> make test  # Local C# framework test
 
 VIEW LATEST BACKTEST:
 No actual backtest yet - need to push files first!
@@ -126,17 +134,23 @@ def show_quick_commands():
     commands = {
         "DEPLOY TO QUANTCONNECT": [
             'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
-            'lean cloud backtest . --name "SPY_EMA_Test_$(Get-Date -Format "MMdd_HHmm")"'
+            'make push'
         ],
         
-        "RUN ALL TESTS": [
-            'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
-            'dotnet run --project tests/TestRunner.cs'
+        "RUN CLOUD BACKTEST": [
+            'make backtest'
         ],
         
-        "RUN STRATEGY SIMULATION": [
-            'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
-            'dotnet run --project strategies/SPYEMAStrategy.cs'
+        "COPY FILES TO DEPLOY": [
+            'make copy'
+        ],
+        
+        "LOCAL FRAMEWORK TEST": [
+            'make test'
+        ],
+        
+        "PROCESS LOGS": [
+            'make logs'
         ],
         
         "CHECK CLOUD STATUS": [
