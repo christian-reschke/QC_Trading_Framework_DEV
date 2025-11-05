@@ -252,6 +252,31 @@ def current_strategy_summary():
     print()
     print("NEXT: Try 'make calculate-performance' for latest comparison table!")
 
+def show_documentation_guidelines():
+    """
+    Display documentation maintenance guidelines
+    """
+    print("Documentation Guidelines")
+    print("=" * 50)
+    print()
+    print("DOCUMENTATION MAINTENANCE:")
+    print("   Update PROJECT_GUIDE.py after significant changes")
+    print("   Keep README.html current with project functionality")
+    print("   Document new features and workflows immediately")
+    print("   Maintain consistency between code and documentation")
+    print()
+    print("WORKFLOW DOCUMENTATION:")
+    print("   Document any new make commands in quick_commands()")
+    print("   Update performance results after backtests")
+    print("   Add new tools to PROJECT_STRUCTURE dictionary")
+    print("   Keep next steps realistic and actionable")
+    print()
+    print("CODE DOCUMENTATION:")
+    print("   Use clear, descriptive function and variable names")
+    print("   Add docstrings for complex functions")
+    print("   Comment any non-obvious logic or calculations")
+    print("   Follow PEP 8 style guidelines consistently")
+
 def show_next_steps():
     """
     Display suggested next steps for project development
@@ -300,6 +325,8 @@ if __name__ == "__main__":
     current_strategy_summary()
     print("\n")
     show_next_steps()
+    print("\n")
+    show_documentation_guidelines()
     
     print("\n" + "=" * 60)
     print("TIP: Import this file in other Python scripts to use utility functions")
