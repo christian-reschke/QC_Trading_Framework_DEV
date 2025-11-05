@@ -1,53 +1,119 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>SPY EMA Strategy - QuantConnect Trading Algorithm</title>
-</head>
-<body>
+# QC Trading Framework - Master Project
 
-<!--
+<!-- 
 ===============================================================================================================
-PROJECT SCOPE: SPY EMA Strategy with Enhanced Performance Analysis
+FILE: README.md
+PURPOSE: What this project is, master framework concept, links to other docs
 ===============================================================================================================
-PURPOSE:
-• Professional SPY EMA crossover trading strategy for QuantConnect platform
-• Comprehensive performance analysis with buy & hold benchmarking
-• Real market data integration and color-coded performance comparison
-• Clean, maintainable codebase following professional development practices
-• Production-ready algorithm with robust testing and analysis tools
+-->
 
-CURRENT FUNCTIONALITY:
-• SPY EMA50/EMA100 crossover strategy implementation
-• Real-time buy & hold benchmark tracking within algorithm
-• Professional performance comparison table with color coding
-• 32+ years of real SPY market data for accurate backtesting
-• Enhanced backtest workflow with terminal-based analysis
-• Automated deployment pipeline to QuantConnect cloud
+**Last Updated:** November 5, 2025  
+**Status:** Active Development - Transitioning to Master Framework
 
-CORE OBJECTIVES:
-1. Accurate algorithmic trading strategy implementation
-2. Professional performance analysis and benchmarking
-3. Clean, maintainable Python codebase
-4. Real market data integration for precise calculations
-5. Production-ready deployment workflow
+## What This Project Is
 
-Performance Analysis Features:
-• Real-time SPY price tracking during algorithm execution
-• Exact buy & hold performance calculation using opening prices
-• Color-coded comparison tables (Green = outperform, Red = underperform)
-• Comprehensive risk metrics (Sharpe ratio, max drawdown, volatility)
-• Support for any date range analysis using historical data
-• Professional table formatting with dynamic column sizing
+This is the **MASTER FRAMEWORK** for QuantConnect algorithmic trading strategies. It serves as the central development environment where:
 
-Current Results (Q3 2025):
-• Strategy Return: 8.13% vs Buy & Hold: 8.51%
-• Strategy Sharpe: 2.601 vs Buy & Hold: 3.868
-• Strategy Drawdown: 2.40% vs Buy & Hold: 2.13%
-• Analysis: Buy & hold showed superior risk-adjusted returns
+- **Modules are developed and tested** - Reusable trading components (entry signals, exit strategies, position sizing, risk management)
+- **Strategies are experimented with** - Rapid testing of module combinations and new trading ideas
+- **Performance analysis is conducted** - Professional benchmarking tools with real market data
+- **Production strategies are derived** - Clean, focused strategies exported to separate repositories
 
-===============================================================================================================
-CURRENT ARCHITECTURE
-===============================================================================================================
+## Master Framework Concept
+
+### This Repository (Master Framework)
+- **Purpose:** Development, experimentation, and module library
+- **Content:** All modules, testing tools, performance analysis, strategy playground
+- **Audience:** Development and research
+
+### Production Projects (Derived Repositories)
+- **SPY_EMA_Strategy** - Clean production deployment (future)
+- **QQQ_Momentum_Strategy** - Additional strategies (future)
+- **Multi_Asset_Strategy** - Portfolio strategies (future)
+
+### Key Principles
+- **One Strategy = One Asset:** Focused, single-asset production strategies
+- **Module Reusability:** Build once, test across multiple strategies
+- **Production Stability:** Production projects remain stable when master framework evolves
+- **Controlled Updates:** Manual module updates to production with performance validation
+
+## Current Capabilities
+
+### Implemented Features
+- **SPY EMA Crossover Strategy** - Working algorithm with proven Q3 2025 results
+- **Professional Performance Analysis** - Color-coded comparison tables with buy & hold benchmarking
+- **Real Market Data Integration** - 32+ years of SPY data from TradingView
+- **Enhanced Backtest Workflow** - Automated deployment and analysis pipeline
+- **Comprehensive Risk Metrics** - Sharpe ratio, max drawdown, volatility calculations
+
+### Latest Performance (Q3 2025)
+- **Strategy Return:** 8.13% vs **Buy & Hold:** 8.51%
+- **Strategy Sharpe:** 2.601 vs **Buy & Hold:** 3.868
+- **Analysis:** Buy & hold outperformed with better risk-adjusted returns
+
+## Project Architecture
+
+### Current Structure (Transitional)
+- **Algorithm:** main.py with integrated buy & hold tracking
+- **Performance Tools:** calculate_performance.py with color-coded tables
+- **Data:** Real SPY market data (1993-2025)
+- **Deployment:** Automated pipeline to QuantConnect cloud
+
+### Future Structure (Master Framework)
+- **Module Library:** Reusable entry/exit/sizing/risk components
+- **Strategy Playground:** Rapid module combination testing
+- **Export Tools:** Generate clean production strategies
+- **Version Management:** Track module versions and performance impact
+
+## Quick Start
+
+### Current Project Usage
+```bash
+# Deploy to QuantConnect
+make push
+
+# Run enhanced backtest with analysis
+make backtest-enhanced
+
+# Generate performance comparison table
+make calculate-performance
+```
+
+### Get Started
+1. **Clone this repository** - Your development environment
+2. **Review PROJECT_GUIDE.md** - Detailed workflows and commands
+3. **Check masterplan.md** - Future architecture and transformation roadmap
+4. **Run performance analysis** - See the color-coded comparison system in action
+
+## Documentation
+
+This project maintains comprehensive documentation across three focused files:
+
+- **[README.md](README.md)** - This file: High-level project overview and master framework concept
+- **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Detailed workflows, commands, performance analysis tools, and daily operations
+- **[masterplan.md](masterplan.md)** - Future architecture, transformation roadmap, and strategic planning
+
+### For Different Audiences
+- **New to the project?** Start here (README.md)
+- **Daily development work?** Use PROJECT_GUIDE.md
+- **Architecture and planning?** Reference masterplan.md
+
+## Development Status
+
+### Current Phase: Transition to Master Framework
+- **Working:** SPY EMA strategy with professional analysis tools
+- **In Progress:** Module extraction and versioning system design
+- **Next:** Strategy template system and production deployment workflow
+
+### Repository Evolution
+1. **Phase 1 (Current):** Single strategy with enhanced analysis
+2. **Phase 2 (Planned):** Module library and strategy playground
+3. **Phase 3 (Future):** Full master framework with production derivatives
+
+---
+**Repository:** SPY_EMA_Strategy_DEV (transitioning to QC_Trading_Framework)  
+**Contact:** See PROJECT_GUIDE.md for detailed workflows  
+**Planning:** See masterplan.md for architecture roadmap
 
 ===============================================================================================================
 CURRENT ARCHITECTURE
