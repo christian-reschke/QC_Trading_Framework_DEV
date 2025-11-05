@@ -50,21 +50,18 @@ DEPLOYMENT WORKFLOW
 ==========================================
 QUICK START COMMANDS
 ==========================================
-"""
 
 DEPLOY TO QUANTCONNECT:
-> cd "d:\QC\Crawling Fluorescent Orange Chinchilla"
+> cd "d:\QC\SPY_EMA_Strategy_DEV"
 > lean cloud push --project .
 > lean cloud backtest . --name "SPY_EMA_Strategy_Test"
 
-NOTE: May need to rename directory first due to special characters!
-
 RUN C# UNIT TESTS:
-> cd "d:\QC\Crawling Fluorescent Orange Chinchilla\tests"
+> cd "d:\QC\SPY_EMA_Strategy_DEV\tests"
 > dotnet run --project TestRunner.cs
 
 RUN STRATEGY SIMULATION:
-> cd "d:\QC\Crawling Fluorescent Orange Chinchilla\strategies" 
+> cd "d:\QC\SPY_EMA_Strategy_DEV\strategies" 
 > dotnet run --project SPYEMAStrategy.cs
 
 VIEW LATEST BACKTEST:
@@ -128,17 +125,17 @@ def show_quick_commands():
     """
     commands = {
         "DEPLOY TO QUANTCONNECT": [
-            'cd "d:\\QC\\Crawling Fluorescent Orange Chinchilla"',
+            'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
             'lean cloud backtest . --name "SPY_EMA_Test_$(Get-Date -Format "MMdd_HHmm")"'
         ],
         
         "RUN ALL TESTS": [
-            'cd "d:\\QC\\Crawling Fluorescent Orange Chinchilla"',
+            'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
             'dotnet run --project tests/TestRunner.cs'
         ],
         
         "RUN STRATEGY SIMULATION": [
-            'cd "d:\\QC\\Crawling Fluorescent Orange Chinchilla"',
+            'cd "d:\\QC\\SPY_EMA_Strategy_DEV"',
             'dotnet run --project strategies/SPYEMAStrategy.cs'
         ],
         
@@ -222,5 +219,4 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("TIP: Import this file in other Python scripts to use utility functions")
     print("TIP: Edit this file to add your own notes and shortcuts")
-    print("REALITY CHECK: Need to actually push our strategy files first!")
     print("NEXT: Fix directory name issue and deploy for real")

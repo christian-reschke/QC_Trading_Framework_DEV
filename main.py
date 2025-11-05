@@ -12,7 +12,8 @@ class SPYEMACrossoverStrategy(QCAlgorithm):
     - Position Size: 100% of available cash
     - Timeframe: Daily
     """
-
+    # test comment
+    
     def initialize(self):
         # Set algorithm framework settings
         self.set_start_date(2025, 7, 1)   # Q3 2025 start
