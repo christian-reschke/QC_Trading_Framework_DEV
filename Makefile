@@ -49,3 +49,15 @@ backtest:
 		Set-Location -LiteralPath $$parent; \
 		& '$(LEAN_EXE)' cloud backtest $$deployName \
 	"
+
+backtest-with-summary: backtest
+	python extract_performance.py
+
+backtest-enhanced:
+	python backtest_with_analysis.py
+
+results:
+	python extract_performance.py
+
+calculate-performance:
+	python calculate_performance.py

@@ -12,7 +12,7 @@ class SPYEMACrossoverStrategy(QCAlgorithm):
     - Position Size: 100% of available cash
     - Timeframe: Daily
     """
-    # test comment 2
+    # test comment 4 - simplified buy and hold tracking with price array
     
     def initialize(self):
         # Set algorithm framework settings
@@ -30,6 +30,10 @@ class SPYEMACrossoverStrategy(QCAlgorithm):
         # Track our entry price for logging
         self.entry_price = None
         self.entry_time = None
+        
+        # Track SPY prices for buy-and-hold comparison
+        self.spy_prices = []
+        self.trading_days = []
         
         # Algorithm parameters
         self.allocation_percent = 0.99  # Use 99% to allow for fees
@@ -59,6 +63,11 @@ class SPYEMACrossoverStrategy(QCAlgorithm):
             return
             
         current_price = spy_data.close
+        
+        # Track SPY prices for buy-and-hold calculation
+        self.spy_prices.append(float(current_price))
+        self.trading_days.append(self.time)
+        
         ema50_value = self.ema50.current.value
         ema100_value = self.ema100.current.value
         current_holdings = self.portfolio[self.spy].quantity
@@ -111,15 +120,59 @@ class SPYEMACrossoverStrategy(QCAlgorithm):
                     f"Shares={current_holdings:,} | Unrealized=${unrealized_pnl:,.0f}")
 
     def on_end_of_algorithm(self):
-        """Called when the algorithm terminates - log final performance"""
+        """Called when the algorithm terminates - log final performance vs Buy & Hold"""
         final_value = self.portfolio.total_portfolio_value
-        total_return = (final_value - 1_000_000) / 1_000_000
+        strategy_return = (final_value - 1_000_000) / 1_000_000
         
-        self.log(f"\n BACKTEST COMPLETE!")
-        self.log(f"    Starting Capital: $1,000,000")
-        self.log(f"    Final Portfolio Value: ${final_value:,.0f}")
-        self.log(f"    Total Return: {total_return:.2%}")
-        self.log(f"    Strategy: Buy SPY > EMA50, Sell SPY < EMA100")
+        # Calculate Buy and Hold performance from price history
+        if len(self.spy_prices) >= 2:
+            start_price = self.spy_prices[0]
+            end_price = self.spy_prices[-1]
+            buy_hold_return = (end_price - start_price) / start_price
+            
+            # Calculate what the buy-and-hold value would be
+            initial_investment = 1_000_000 * self.allocation_percent
+            buy_hold_shares = initial_investment / start_price
+            buy_hold_final_value = buy_hold_shares * end_price
+            
+            outperformance = strategy_return - buy_hold_return
+            trading_days = len(self.spy_prices)
+        else:
+            buy_hold_return = 0
+            outperformance = strategy_return
+            buy_hold_final_value = 1_000_000
+            start_price = end_price = 0
+            trading_days = 0
+        
+        self.log(f"\n BACKTEST COMPLETE - PERFORMANCE COMPARISON")
+        self.log(f"=" * 60)
+        self.log(f"    STRATEGY PERFORMANCE:")
+        self.log(f"      Starting Capital: $1,000,000")
+        self.log(f"      Final Portfolio Value: ${final_value:,.0f}")
+        self.log(f"      Total Return: {strategy_return:.2%}")
+        self.log(f"")
+        self.log(f"    BUY & HOLD BENCHMARK (SPY):")
+        self.log(f"      SPY Start Price: ${start_price:.2f}")
+        self.log(f"      SPY End Price: ${end_price:.2f}")
+        self.log(f"      Buy & Hold Return: {buy_hold_return:.2%}")
+        self.log(f"      Buy & Hold Final Value: ${buy_hold_final_value:,.0f}")
+        self.log(f"")
+        self.log(f"    COMPARISON:")
+        if outperformance > 0:
+            self.log(f"      ✓ Strategy OUTPERFORMED by {outperformance:.2%}")
+        elif outperformance < 0:
+            self.log(f"      ✗ Strategy UNDERPERFORMED by {abs(outperformance):.2%}")
+        else:
+            self.log(f"      = Strategy matched Buy & Hold")
+        self.log(f"")
+        self.log(f"    TRADING STATISTICS:")
+        self.log(f"      Trading Days: {trading_days}")
+        if trading_days > 0:
+            annualized_strategy = ((final_value / 1_000_000) ** (252 / trading_days)) - 1
+            annualized_buy_hold = ((1 + buy_hold_return) ** (252 / trading_days)) - 1
+            self.log(f"      Annualized Strategy Return: {annualized_strategy:.2%}")
+            self.log(f"      Annualized Buy & Hold Return: {annualized_buy_hold:.2%}")
+        self.log(f"=" * 60)
         
         # Final position status
         spy_holdings = self.portfolio[self.spy].quantity
