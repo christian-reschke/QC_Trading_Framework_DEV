@@ -120,3 +120,35 @@ class ISimpleStrategy(ABC):
     def get_strategy_name(self) -> str:
         """Return strategy name for identification"""
         pass
+
+
+class IStrategy(ABC):
+    """Interface for QuantConnect trading strategies"""
+    
+    @abstractmethod
+    def initialize(self, algorithm) -> None:
+        """
+        Initialize strategy with QuantConnect algorithm instance
+        Args:
+            algorithm: QCAlgorithm instance
+        """
+        pass
+    
+    @abstractmethod
+    def on_data(self, algorithm, data) -> None:
+        """
+        Process market data on each tick/bar
+        Args:
+            algorithm: QCAlgorithm instance
+            data: QuantConnect Slice data
+        """
+        pass
+    
+    @abstractmethod
+    def on_end_of_algorithm(self, algorithm) -> None:
+        """
+        Called when algorithm terminates
+        Args:
+            algorithm: QCAlgorithm instance
+        """
+        pass
