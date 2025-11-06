@@ -195,6 +195,25 @@ dotnet test tests/unit/MetricsTests.cs
 - `masterplan.md` - Future architecture and strategic planning
 - `CHAT_HISTORY.md` - Complete record of strategic planning session
 
+### Implemented Strategies
+- **SPY EMA Strategy** - Simple moving average crossover strategy (COMPLETE)
+- **Vola Breakout Strategy** - Multi-condition volatility breakout strategy with:
+  - EMA trend filter (price > ema and ema > ema[1])
+  - Low volatility filter (BBW < threshold)
+  - Bollinger Band upper breakout (close > bbUpper)
+  - Recent high momentum (close > highest(high, 5)[1])
+  - Trailing stop exit (4% dynamic stop)
+
+### Strategy Testing Framework
+```python
+# Test specific strategy
+python -c "from strategies.vola_breakout_strategy import main; main()"
+
+# Run strategy modules individually
+python -c "from modules.entries.vola_breakout_entry import VolaBreakoutEntry; print('Entry module loaded')"
+python -c "from modules.exits.trailing_stop_exit import TrailingStopExit; print('Exit module loaded')"
+```
+
 ### Documentation Standards
 - **README.md** - High-level project overview
 - **PROJECT_GUIDE.md** - Detailed workflows and operations (this file)

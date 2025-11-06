@@ -20,7 +20,6 @@ class QCTradingFramework(QCAlgorithm):
     - Real market data integration
     - Production-ready strategy export capabilities
     """
-    # test comment 4 - simplified buy and hold tracking with price array
     
     def initialize(self):
         # Set algorithm framework settings
@@ -167,9 +166,9 @@ class QCTradingFramework(QCAlgorithm):
         self.log(f"")
         self.log(f"    COMPARISON:")
         if outperformance > 0:
-            self.log(f"      ✓ Strategy OUTPERFORMED by {outperformance:.2%}")
+            self.log(f"      Strategy OUTPERFORMED by {outperformance:.2%}")
         elif outperformance < 0:
-            self.log(f"      ✗ Strategy UNDERPERFORMED by {abs(outperformance):.2%}")
+            self.log(f"      Strategy UNDERPERFORMED by {abs(outperformance):.2%}")
         else:
             self.log(f"      = Strategy matched Buy & Hold")
         self.log(f"")

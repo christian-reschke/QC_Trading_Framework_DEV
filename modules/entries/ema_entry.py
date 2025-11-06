@@ -1,7 +1,3 @@
-"""
-EMA-based entry modules
-Converts C# EMA50Entry, EMA100Entry patterns to flexible Python
-"""
 from framework.interfaces import IEntryModule
 from modules.indicators import ema_is_rising, price_crosses_above_ema, golden_cross
 from typing import Dict, Any, List
@@ -11,8 +7,7 @@ class EMAEntry(IEntryModule):
     """
     Flexible EMA entry module - replaces separate EMA50Entry, EMA100Entry classes
     Can handle any EMA period and multiple conditions
-    """
-    
+    """    
     def __init__(self, period: int = 50, require_rising: bool = True, require_price_above: bool = True):
         """
         Initialize EMA entry module
