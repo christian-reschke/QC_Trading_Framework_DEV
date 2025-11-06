@@ -255,3 +255,42 @@ ls ../SPY_EMA_Strategy_DEPLOY/
 **Current Status:** Successfully renamed to QC Trading Framework and deployed to QuantConnect  
 **Next Steps:** Begin Step 1 - Module Extraction as outlined in masterplan.md  
 **Reference:** See CHAT_HISTORY.md for complete strategic planning session record
+
+
+## TECHNICAL SPECIFICATIONS
+
+### Repository Structure
+**Master Framework:**
+```
+QC_Trading_Framework/
+├── modules/
+│   ├── entries/           # Entry signal modules
+│   ├── exits/             # Exit signal modules  
+│   ├── sizing/            # Position sizing modules
+│   └── risk/              # Risk management modules
+├── framework/
+│   ├── builder/           # Strategy builder
+│   ├── interfaces/        # Module interfaces
+│   └── templates/         # Strategy templates
+├── tools/
+│   ├── export/            # Strategy export tools
+│   ├── analysis/          # Performance analysis
+│   └── testing/           # A/B testing framework
+├── data/                  # Market data files
+├── strategies/            # Experimental strategies
+└── docs/                  # Framework documentation
+```
+
+**Production Repository Example:**
+```
+SPY_EMA_Strategy/
+├── main.py               # Clean algorithm implementation
+├── config.json           # Algorithm configuration
+├── modules/              # Copied from framework (frozen)
+│   ├── EMA50Entry.py     # v1.2.0 (last update)
+│   ├── EMA100Exit.py     # v1.1.0 (last update)
+│   └── FullAllocation.py # v1.0.0 (baseline)
+├── tools/
+│   └── update_modules.py # Module update utility
+└── README.md             # Strategy-specific documentation
+```
