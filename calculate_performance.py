@@ -143,7 +143,7 @@ def calculate_performance_metrics(data, start_date=None, end_date=None):
         'volatility': math.sqrt(variance * 252) if len(excess_returns) > 1 else 0
     }
 
-def calculate_performance_from_file(file_path, start_date=None, end_date=None):
+def calculate_performance_from_file(file_path, start_date=None, end_date=None, initial_capital=1000000):
     """
     Calculate performance from CSV data file
     Uses opening price of start date and closing price of end date
@@ -160,8 +160,8 @@ def calculate_performance_from_file(file_path, start_date=None, end_date=None):
         end_price = data[-1]['close']
     
     if start_price and end_price:
-        # Calculate basic performance
-        basic_performance = calculate_performance_from_prices(start_price, end_price)
+        # Calculate basic performance with custom initial capital
+        basic_performance = calculate_performance_from_prices(start_price, end_price, initial_capital)
         
         # Calculate additional metrics
         metrics = calculate_performance_metrics(data, start_date, end_date)
@@ -190,13 +190,14 @@ def calculate_performance_from_prices(start_price, end_price, initial_capital=10
     return {
         'start_price': start_price,
         'end_price': end_price,
+        'start_value': initial_capital,
         'shares': shares,
         'investment': investment,
         'final_value': final_value,
         'return': buy_hold_return
     }
 
-def compare_with_strategy(buy_hold_data, strategy_return=0.0813, strategy_sharpe=2.601, strategy_drawdown=0.024):
+def compare_with_strategy(buy_hold_data, strategy_return=0.0056, strategy_sharpe=-0.54, strategy_drawdown=0.118):
     """
     Compare buy & hold with strategy performance in clean table format
     """
@@ -226,15 +227,15 @@ def compare_with_strategy(buy_hold_data, strategy_return=0.0813, strategy_sharpe
     print(f"│ Metric              │{header_col2}│{header_col3}│")
     print(border_mid)
     
-    # Start Value
-    start_value = 1000000
+    # Start Value (use starting capital from buy_hold_data)
+    start_value = buy_hold_data.get('start_value', 1000000)
     bh_start = f"$ {start_value:,.0f} ".rjust(col_width)
     strategy_start = f"$ {start_value:,.0f} ".rjust(col_width)
     print(f"│ Start Value         │{bh_start}│{strategy_start}│")
     
     # Final Value
     bh_final = buy_hold_data['final_value']
-    strategy_final = 1000000 * (1 + strategy_return)
+    strategy_final = start_value * (1 + strategy_return)
     bh_final_str = f"$ {bh_final:,.0f} ".rjust(col_width)
     strategy_final_str = f"$ {strategy_final:,.0f} ".rjust(col_width)
     print(f"│ Final Value         │{bh_final_str}│{strategy_final_str}│")

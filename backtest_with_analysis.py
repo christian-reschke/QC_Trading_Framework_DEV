@@ -191,12 +191,16 @@ if __name__ == "__main__":
         try:
             from calculate_performance import calculate_performance_from_file, compare_with_strategy
             
-            # Use Q3 2025 date range for current analysis
+            # Use clean 2024 period matching strategy settings
             file_path = "data/spy/SPY_DAILY_1993-01-29_2025-11-04.csv"
-            start_date = "2025-07-01"
-            end_date = "2025-09-30"
+            start_date = "2024-01-01"  # Clean 12-month period
+            end_date = "2024-12-31"
+            starting_capital = 100000   # Match $100K from QuantConnect
             
-            buy_hold_data = calculate_performance_from_file(file_path, start_date, end_date)
+            print(f"Calculating buy & hold performance for period: {start_date} to {end_date}")
+            print(f"Starting capital: ${starting_capital:,} (matching QuantConnect)")
+            
+            buy_hold_data = calculate_performance_from_file(file_path, start_date, end_date, starting_capital)
             if buy_hold_data:
                 compare_with_strategy(buy_hold_data)
             else:

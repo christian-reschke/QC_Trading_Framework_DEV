@@ -79,17 +79,6 @@ push: copy
 	"
 
 backtest:
-	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
-		$$parent = Split-Path -Parent (Get-Location); \
-		Write-Host \"Running backtest for QC_Trading_Framework_DEPLOY...\"; \
-		Set-Location -LiteralPath $$parent; \
-		& '$(LEAN_EXE)' cloud backtest QC_Trading_Framework_DEPLOY \
-	"
-
-backtest-with-summary: backtest
-	python extract_performance.py
-
-backtest-enhanced:
 	python backtest_with_analysis.py
 
 results:

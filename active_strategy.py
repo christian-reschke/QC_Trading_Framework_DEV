@@ -1,195 +1,256 @@
 """
-SPY EMA Crossover Strategy
+Vola Breakout Strategy
 
 Strategy Rules:
-- BUY SPY when close price crosses ABOVE EMA50
-- SELL SPY when close price crosses BELOW EMA100  
+- Entry: inTrend AND isLowBBW AND breakAboveBB AND breakAboveRecentHigh
+- Exit: Trailing stop loss
 - Position Size: 99% of available cash
 - Timeframe: Daily
 
-Entry: Price > EMA50
-Exit: Price < EMA100
+Entry Conditions:
+1. inTrend = price > ema and ema > ema[1]          # EMA trend filter
+2. isLowBBW = isReady and bbw < bbwThreshold       # Bollinger Band Width volatility filter
+3. breakAboveBB = close > bbUpper                  # Upper Bollinger Band breakout
+4. breakAboveRecentHigh = close > ta.highest(high, 5)[1]  # Recent high momentum confirmation
+
+Exit: Trailing stop
 """
 
 from AlgorithmImports import *
 from framework.interfaces import IStrategy
 
 
-class SPYEMAStrategy(IStrategy):
-    """SPY EMA Crossover Strategy Implementation"""
+class VolaBreakoutStrategy(IStrategy):
+    """Volatility Breakout Strategy Implementation"""
     
     def initialize(self, algorithm):
-        """Initialize the SPY EMA strategy"""
-        # Set algorithm framework settings
-        algorithm.set_start_date(2025, 7, 1)   # Q3 2025 start
-        algorithm.set_end_date(2025, 9, 30)    # Q3 2025 end  
-        algorithm.set_cash(1_000_000)          # $1M starting capital
+        """Initialize the strategy"""
+        self.algorithm = algorithm
         
-        # Add SPY with daily resolution
-        self.spy = algorithm.add_equity("SPY", Resolution.DAILY).symbol
+        # Set backtest period for consistent analysis
+        algorithm.SetStartDate(2024, 1, 1)
+        algorithm.SetEndDate(2024, 12, 31)
+        algorithm.SetCash(100000)
         
-        # Create EMA indicators
-        self.ema50 = algorithm.ema(self.spy, 50, Resolution.DAILY)
-        self.ema100 = algorithm.ema(self.spy, 100, Resolution.DAILY)
+        self.symbol = algorithm.AddEquity("SPY", Resolution.DAILY).Symbol
         
-        # Track our entry price for logging
-        self.entry_price = None
-        self.entry_time = None
+        # Strategy parameters
+        self.ema_period = 50
+        self.bb_period = 20
+        self.bb_std = 2
+        self.bbw_threshold = 0.1  # BBW threshold for low volatility
+        self.recent_high_period = 5
+        self.trail_percent = 0.05  # 5% trailing stop
         
-        # Track SPY prices for buy-and-hold comparison
-        self.spy_prices = []
-        self.trading_days = []
+        # Indicators
+        self.ema = algorithm.EMA(self.symbol, self.ema_period)
+        self.bb = algorithm.BB(self.symbol, self.bb_period, self.bb_std)
         
-        # Algorithm parameters
-        self.allocation_percent = 0.99  # Use 99% to allow for fees
+        # State tracking
+        self.position_entry_price = None
+        self.highest_price_since_entry = None
         
-        # Warm up indicators (need 100 days for EMA100)
-        algorithm.set_warm_up(105)  # Extra buffer for stability
+        # Warm up indicators
+        algorithm.SetWarmUp(max(self.ema_period, self.bb_period) + self.recent_high_period)
         
-        # Log strategy parameters
-        algorithm.log(f" SPY EMA CROSSOVER STRATEGY INITIALIZED")
-        algorithm.log(f"    Period: {algorithm.start_date} to {algorithm.end_date}")
-        algorithm.log(f"    Starting Capital: ${algorithm.portfolio.cash:,.0f}")
-        algorithm.log(f"    Entry: Price > EMA50, Exit: Price < EMA100")
-        algorithm.log(f"    Allocation: {self.allocation_percent:.0%}")
+        # Setup debugging plots
+        self._setup_debug_plots(algorithm)
+        
+        algorithm.Log(f"Vola Breakout Strategy initialized - EMA{self.ema_period}, BB{self.bb_period}, Trail{self.trail_percent:.1%}")
+
+    def _setup_debug_plots(self, algorithm):
+        """Setup debugging charts for strategy analysis"""
+        
+        # 1. Price and Moving Averages Chart
+        price_chart = Chart("Price & Indicators")
+        price_chart.AddSeries(Series("SPY Price", SeriesType.Line, "$", Color.Blue))
+        price_chart.AddSeries(Series("EMA50", SeriesType.Line, "$", Color.Orange))
+        price_chart.AddSeries(Series("BB Upper", SeriesType.Line, "$", Color.Red))
+        price_chart.AddSeries(Series("BB Lower", SeriesType.Line, "$", Color.Red))
+        price_chart.AddSeries(Series("BB Middle", SeriesType.Line, "$", Color.Gray))
+        algorithm.AddChart(price_chart)
+        
+        # 2. Bollinger Band Width Chart (key volatility indicator)
+        bbw_chart = Chart("Bollinger Band Width")
+        bbw_chart.AddSeries(Series("BBW", SeriesType.Line, "", Color.Purple))
+        bbw_chart.AddSeries(Series("BBW Threshold", SeriesType.Line, "", Color.Red))
+        algorithm.AddChart(bbw_chart)
+        
+        # 3. Entry Conditions Chart
+        conditions_chart = Chart("Entry Conditions")
+        conditions_chart.AddSeries(Series("Trend OK", SeriesType.Flag, "", Color.Green))
+        conditions_chart.AddSeries(Series("Low Vol OK", SeriesType.Flag, "", Color.Blue))
+        conditions_chart.AddSeries(Series("BB Breakout OK", SeriesType.Flag, "", Color.Orange))
+        conditions_chart.AddSeries(Series("Momentum OK", SeriesType.Flag, "", Color.Purple))
+        conditions_chart.AddSeries(Series("Entry Signal", SeriesType.Flag, "", Color.Red))
+        algorithm.AddChart(conditions_chart)
+        
+        # 4. Position and Performance Chart
+        position_chart = Chart("Position & Performance")
+        position_chart.AddSeries(Series("Position Value", SeriesType.Line, "$", Color.Green))
+        position_chart.AddSeries(Series("Cash", SeriesType.Line, "$", Color.Blue))
+        position_chart.AddSeries(Series("Total Portfolio", SeriesType.Line, "$", Color.Black))
+        algorithm.AddChart(position_chart)
 
     def on_data(self, algorithm, data):
-        """Process market data for SPY EMA strategy"""
-        # Skip if warming up or no data
-        if algorithm.is_warming_up or not data.contains_key(self.spy):
+        """Process new market data"""
+        if not data.ContainsKey(self.symbol) or data[self.symbol] is None:
             return
             
-        # Skip if indicators not ready
-        if not (self.ema50.is_ready and self.ema100.is_ready):
+        if algorithm.IsWarmingUp:
+            return
+        
+        bar = data[self.symbol]
+        current_price = bar.Close
+        current_holdings = algorithm.Portfolio[self.symbol].Quantity
+        
+        # Plot current data for debugging
+        self._plot_debug_data(algorithm, current_price)
+        
+        # Entry logic
+        if current_holdings == 0:
+            if self._check_entry_conditions(current_price):
+                # Calculate position size (99% of portfolio)
+                cash_to_invest = algorithm.Portfolio.Cash * 0.99
+                shares_to_buy = int(cash_to_invest / current_price)
+                
+                if shares_to_buy > 0:
+                    algorithm.MarketOrder(self.symbol, shares_to_buy)
+                    self.position_entry_price = current_price
+                    self.highest_price_since_entry = current_price
+                    algorithm.Log(f"ENTRY: Bought {shares_to_buy} shares of SPY at ${current_price:.2f}")
+        
+        # Exit logic (trailing stop)
+        elif current_holdings > 0:
+            if self._check_exit_conditions(current_price):
+                algorithm.Liquidate(self.symbol)
+                algorithm.Log(f"EXIT: Sold SPY at ${current_price:.2f} (Entry: ${self.position_entry_price:.2f})")
+                self.position_entry_price = None
+                self.highest_price_since_entry = None
+            else:
+                # Update highest price for trailing stop
+                if current_price > self.highest_price_since_entry:
+                    self.highest_price_since_entry = current_price
+
+    def _check_entry_conditions(self, current_price):
+        """Check all entry conditions"""
+        if not self.ema.IsReady or not self.bb.IsReady:
+            return False
+        
+        # Get historical data for trend and momentum checks
+        history = self.algorithm.History(self.symbol, self.recent_high_period + 2, Resolution.DAILY)
+        if history.empty or len(history) < self.recent_high_period + 2:
+            return False
+        
+        # 1. inTrend = price > ema and ema > ema[1]
+        ema_current = self.ema.Current.Value
+        prev_close = float(history.iloc[-2]['close'])
+        
+        # Simple trend check: price above EMA and price rising
+        in_trend = current_price > ema_current and current_price > prev_close
+        
+        # 2. isLowBBW = isReady and bbw < bbwThreshold
+        bb_upper = self.bb.UpperBand.Current.Value
+        bb_lower = self.bb.LowerBand.Current.Value
+        bb_middle = self.bb.MiddleBand.Current.Value
+        bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 1.0  # Normalized BBW
+        is_low_bbw = bb_width < self.bbw_threshold
+        
+        # 3. breakAboveBB = close > bbUpper
+        break_above_bb = current_price > bb_upper
+        
+        # 4. breakAboveRecentHigh = close > ta.highest(high, 5)[1]
+        # Get highest high of last 5 days using history
+        try:
+            recent_highs = history['high'].iloc[-(self.recent_high_period+1):-1]  # Exclude today
+            recent_high = float(recent_highs.max())
+            break_above_recent_high = current_price > recent_high
+        except:
+            break_above_recent_high = False
+        
+        # All conditions must be true
+        entry_signal = in_trend and is_low_bbw and break_above_bb and break_above_recent_high
+        
+        if entry_signal:
+            self.algorithm.Log(f"ENTRY SIGNAL: Price=${current_price:.2f}, EMA=${ema_current:.2f}, BBW={bb_width:.3f}, BB_Upper=${bb_upper:.2f}, Recent_High=${recent_high:.2f}")
+        
+        return entry_signal
+
+    def _plot_debug_data(self, algorithm, current_price):
+        """Plot debugging data to charts"""
+        if not self.ema.IsReady or not self.bb.IsReady:
             return
             
-        # Get current data - add safety check
-        spy_data = data.get(self.spy)
-        if spy_data is None:
-            return
-            
-        current_price = spy_data.close
+        # Plot Price & Indicators
+        algorithm.Plot("Price & Indicators", "SPY Price", current_price)
+        algorithm.Plot("Price & Indicators", "EMA50", self.ema.Current.Value)
+        algorithm.Plot("Price & Indicators", "BB Upper", self.bb.UpperBand.Current.Value)
+        algorithm.Plot("Price & Indicators", "BB Lower", self.bb.LowerBand.Current.Value)
+        algorithm.Plot("Price & Indicators", "BB Middle", self.bb.MiddleBand.Current.Value)
         
-        # Track SPY prices for buy-and-hold calculation
-        self.spy_prices.append(float(current_price))
-        self.trading_days.append(algorithm.time)
+        # Plot Bollinger Band Width
+        bb_upper = self.bb.UpperBand.Current.Value
+        bb_lower = self.bb.LowerBand.Current.Value
+        bb_middle = self.bb.MiddleBand.Current.Value
+        bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 0
         
-        ema50_value = self.ema50.current.value
-        ema100_value = self.ema100.current.value
-        current_holdings = algorithm.portfolio[self.spy].quantity
+        algorithm.Plot("Bollinger Band Width", "BBW", bb_width)
+        algorithm.Plot("Bollinger Band Width", "BBW Threshold", self.bbw_threshold)
         
-        # ENTRY LOGIC: Buy when price crosses above EMA50 (and we're not already long)
-        if current_holdings == 0:  # No position
-            if current_price > ema50_value:
-                # Calculate position size - use 99% of available cash
-                available_cash = algorithm.portfolio.cash * self.allocation_percent
-                quantity = int(available_cash / current_price)
+        # Plot Entry Conditions (as flags when true)
+        try:
+            history = algorithm.History(self.symbol, self.recent_high_period + 2, Resolution.DAILY)
+            if not history.empty and len(history) >= self.recent_high_period + 2:
                 
-                if quantity > 0:
-                    algorithm.market_order(self.spy, quantity)
-                    self.entry_price = current_price
-                    self.entry_time = algorithm.time
-                    
-                    algorithm.log(f" BUY SIGNAL: {quantity:,} shares SPY @ ${current_price:.2f}")
-                    algorithm.log(f"    EMA50: ${ema50_value:.2f} | EMA100: ${ema100_value:.2f}")
-                    algorithm.log(f"    Position Value: ${quantity * current_price:,.0f}")
-        
-        # EXIT LOGIC: Sell when price crosses below EMA100 (and we have a position)
-        elif current_holdings > 0:  # Have long position
-            if current_price < ema100_value:
-                # Close entire position
-                algorithm.market_order(self.spy, -current_holdings)
+                # Check individual conditions
+                ema_current = self.ema.Current.Value
+                prev_close = float(history.iloc[-2]['close'])
+                in_trend = current_price > ema_current and current_price > prev_close
                 
-                # Calculate trade performance
-                if self.entry_price:
-                    trade_return = (current_price - self.entry_price) / self.entry_price
-                    trade_pnl = current_holdings * (current_price - self.entry_price)
-                    hold_days = (algorithm.time - self.entry_time).days if self.entry_time else 0
-                    
-                    algorithm.log(f" SELL SIGNAL: {current_holdings:,} shares SPY @ ${current_price:.2f}")
-                    algorithm.log(f"   EMA50: ${ema50_value:.2f} | EMA100: ${ema100_value:.2f}")
-                    algorithm.log(f"   Trade Return: {trade_return:.2%} | P&L: ${trade_pnl:,.0f}")
-                    algorithm.log(f"   Hold Period: {hold_days} days")
-                    
-                self.entry_price = None
-                self.entry_time = None
-        
-        # Log daily status (only when we have a position or significant moves)
-        if current_holdings > 0 or algorithm.time.day == 1:  # Monthly status updates
-            portfolio_value = algorithm.portfolio.total_portfolio_value
-            unrealized_pnl = 0
-            if self.entry_price and current_holdings > 0:
-                unrealized_pnl = current_holdings * (current_price - self.entry_price)
+                is_low_bbw = bb_width < self.bbw_threshold
+                break_above_bb = current_price > bb_upper
                 
-            algorithm.log(f" Status: Portfolio=${portfolio_value:,.0f} | SPY=${current_price:.2f} | "
-                    f"EMA50={ema50_value:.2f} | EMA100={ema100_value:.2f} | "
-                    f"Shares={current_holdings:,} | Unrealized=${unrealized_pnl:,.0f}")
+                recent_highs = history['high'].iloc[-(self.recent_high_period+1):-1]
+                recent_high = float(recent_highs.max())
+                break_above_recent_high = current_price > recent_high
+                
+                # Plot flags (1 when condition is true, 0 otherwise)
+                algorithm.Plot("Entry Conditions", "Trend OK", 1 if in_trend else 0)
+                algorithm.Plot("Entry Conditions", "Low Vol OK", 1 if is_low_bbw else 0)
+                algorithm.Plot("Entry Conditions", "BB Breakout OK", 1 if break_above_bb else 0)
+                algorithm.Plot("Entry Conditions", "Momentum OK", 1 if break_above_recent_high else 0)
+                
+                # Overall entry signal
+                entry_signal = in_trend and is_low_bbw and break_above_bb and break_above_recent_high
+                algorithm.Plot("Entry Conditions", "Entry Signal", 1 if entry_signal else 0)
+                
+        except Exception as e:
+            # Don't let plotting errors break the strategy
+            pass
+        
+        # Plot Position & Performance
+        position_value = algorithm.Portfolio[self.symbol].HoldingsValue
+        cash = algorithm.Portfolio.Cash
+        total_portfolio = algorithm.Portfolio.TotalPortfolioValue
+        
+        algorithm.Plot("Position & Performance", "Position Value", position_value)
+        algorithm.Plot("Position & Performance", "Cash", cash)
+        algorithm.Plot("Position & Performance", "Total Portfolio", total_portfolio)
+
+    def _check_exit_conditions(self, current_price):
+        """Check trailing stop exit condition"""
+        if self.highest_price_since_entry is None:
+            return False
+        
+        # Trailing stop: exit if price drops more than trail_percent from highest price
+        stop_price = self.highest_price_since_entry * (1 - self.trail_percent)
+        return current_price <= stop_price
 
     def on_end_of_algorithm(self, algorithm):
-        """Called when the algorithm terminates - log final performance vs Buy & Hold"""
-        final_value = algorithm.portfolio.total_portfolio_value
-        strategy_return = (final_value - 1_000_000) / 1_000_000
-        
-        # Calculate Buy and Hold performance from price history
-        if len(self.spy_prices) >= 2:
-            start_price = self.spy_prices[0]
-            end_price = self.spy_prices[-1]
-            buy_hold_return = (end_price - start_price) / start_price
-            
-            # Calculate what the buy-and-hold value would be
-            initial_investment = 1_000_000 * self.allocation_percent
-            buy_hold_shares = initial_investment / start_price
-            buy_hold_final_value = buy_hold_shares * end_price
-            
-            outperformance = strategy_return - buy_hold_return
-            trading_days = len(self.spy_prices)
-        else:
-            buy_hold_return = 0
-            outperformance = strategy_return
-            buy_hold_final_value = 1_000_000
-            start_price = end_price = 0
-            trading_days = 0
-        
-        algorithm.log(f"\n BACKTEST COMPLETE - PERFORMANCE COMPARISON")
-        algorithm.log(f"=" * 60)
-        algorithm.log(f"    STRATEGY PERFORMANCE:")
-        algorithm.log(f"      Starting Capital: $1,000,000")
-        algorithm.log(f"      Final Portfolio Value: ${final_value:,.0f}")
-        algorithm.log(f"      Total Return: {strategy_return:.2%}")
-        algorithm.log(f"")
-        algorithm.log(f"    BUY & HOLD BENCHMARK (SPY):")
-        algorithm.log(f"      SPY Start Price: ${start_price:.2f}")
-        algorithm.log(f"      SPY End Price: ${end_price:.2f}")
-        algorithm.log(f"      Buy & Hold Return: {buy_hold_return:.2%}")
-        algorithm.log(f"      Buy & Hold Final Value: ${buy_hold_final_value:,.0f}")
-        algorithm.log(f"")
-        algorithm.log(f"    COMPARISON:")
-        if outperformance > 0:
-            algorithm.log(f"      Strategy OUTPERFORMED by {outperformance:.2%}")
-        elif outperformance < 0:
-            algorithm.log(f"      Strategy UNDERPERFORMED by {abs(outperformance):.2%}")
-        else:
-            algorithm.log(f"      = Strategy matched Buy & Hold")
-        algorithm.log(f"")
-        algorithm.log(f"    TRADING STATISTICS:")
-        algorithm.log(f"      Trading Days: {trading_days}")
-        if trading_days > 0:
-            annualized_strategy = ((final_value / 1_000_000) ** (252 / trading_days)) - 1
-            annualized_buy_hold = ((1 + buy_hold_return) ** (252 / trading_days)) - 1
-            algorithm.log(f"      Annualized Strategy Return: {annualized_strategy:.2%}")
-            algorithm.log(f"      Annualized Buy & Hold Return: {annualized_buy_hold:.2%}")
-        algorithm.log(f"=" * 60)
-        
-        # Final position status
-        spy_holdings = algorithm.portfolio[self.spy].quantity
-        if spy_holdings > 0:
-            current_price = algorithm.securities[self.spy].close
-            algorithm.log(f"    Final Position: {spy_holdings:,} shares @ ${current_price:.2f}")
-        else:
-            algorithm.log(f"    Final Position: CASH")
+        """Called at the end of the algorithm"""
+        final_portfolio_value = algorithm.Portfolio.TotalPortfolioValue
+        algorithm.Log(f"Vola Breakout Strategy completed - Final Portfolio Value: ${final_portfolio_value:,.2f}")
 
 
-# For the active_strategy.py pattern, we also need to export the class as ActiveStrategy
-class ActiveStrategy(SPYEMAStrategy):
-    """Active strategy alias for SPY EMA Strategy"""
-    pass
+# Create the ActiveStrategy alias for the framework
+ActiveStrategy = VolaBreakoutStrategy

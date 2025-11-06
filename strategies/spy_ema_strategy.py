@@ -21,9 +21,9 @@ class SPYEMAStrategy(IStrategy):
     def initialize(self, algorithm):
         """Initialize the SPY EMA strategy"""
         # Set algorithm framework settings
-        algorithm.set_start_date(2025, 7, 1)   # Q3 2025 start
-        algorithm.set_end_date(2025, 9, 30)    # Q3 2025 end  
-        algorithm.set_cash(1_000_000)          # $1M starting capital
+        algorithm.set_start_date(2024, 1, 1)   # Clean 2024 year
+        algorithm.set_end_date(2024, 12, 31)   # Clean 2024 year  
+        algorithm.set_cash(100_000)            # $100K starting capital
         
         # Add SPY with daily resolution
         self.spy = algorithm.add_equity("SPY", Resolution.DAILY).symbol
