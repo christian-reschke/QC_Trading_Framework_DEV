@@ -14,9 +14,7 @@ copy:
 	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
 		$$current = Get-Location; \
 		$$parent = Split-Path -Parent $$current; \
-		$$projectName = Split-Path -Leaf $$current; \
-		$$deployName = $$projectName -replace '_DEV$$', '_DEPLOY'; \
-		$$deployPath = Join-Path $$parent $$deployName; \
+		$$deployPath = Join-Path $$parent 'QC_Trading_Framework_DEPLOY'; \
 		Write-Host 'Copying essential files from DEV to DEPLOY...'; \
 		if (!(Test-Path $$deployPath)) { New-Item -ItemType Directory -Path $$deployPath -Force }; \
 		Copy-Item -Path 'main.py' -Destination \"$$deployPath\\main.py\" -Force; \
@@ -30,24 +28,18 @@ logs:
 	
 push: copy
 	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
-		$$current = Get-Location; \
-		$$parent = Split-Path -Parent $$current; \
-		$$projectName = Split-Path -Leaf $$current; \
-		$$deployName = $$projectName -replace '_DEV$$', '_DEPLOY'; \
-		Write-Host \"Pushing $$deployName to QuantConnect...\"; \
+		$$parent = Split-Path -Parent (Get-Location); \
+		Write-Host \"Pushing QC_Trading_Framework_DEPLOY to QuantConnect...\"; \
 		Set-Location -LiteralPath $$parent; \
-		& '$(LEAN_EXE)' cloud push --project $$deployName \
+		& '$(LEAN_EXE)' cloud push --project QC_Trading_Framework_DEPLOY \
 	"
 
 backtest:
 	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
-		$$current = Get-Location; \
-		$$parent = Split-Path -Parent $$current; \
-		$$projectName = Split-Path -Leaf $$current; \
-		$$deployName = $$projectName -replace '_DEV$$', '_DEPLOY'; \
-		Write-Host \"Running backtest for $$deployName...\"; \
+		$$parent = Split-Path -Parent (Get-Location); \
+		Write-Host \"Running backtest for QC_Trading_Framework_DEPLOY...\"; \
 		Set-Location -LiteralPath $$parent; \
-		& '$(LEAN_EXE)' cloud backtest $$deployName \
+		& '$(LEAN_EXE)' cloud backtest QC_Trading_Framework_DEPLOY \
 	"
 
 backtest-with-summary: backtest

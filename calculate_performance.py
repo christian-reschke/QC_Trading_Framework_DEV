@@ -172,29 +172,6 @@ def calculate_performance_from_file(file_path, start_date=None, end_date=None):
         return basic_performance
     else:
         return None
-    """
-    Calculate performance from CSV data file
-    Uses opening price of start date and closing price of end date
-    """
-    data = read_spy_data_from_csv(file_path)
-    if not data:
-        return None
-        
-    if start_date and end_date:
-        start_price, end_price = get_price_for_date_range(data, start_date, end_date)
-        print(f"📅 Date Range: {start_date} to {end_date}")
-    else:
-        # Use opening price of first day and closing price of last day
-        start_price = data[0]['open']  # Changed from 'close' to 'open'
-        end_price = data[-1]['close']
-        print(f"📅 Full File Range: {data[0]['date']} to {data[-1]['date']}")
-    
-    if start_price and end_price:
-        print(f"📈 Buy & Hold: Open ${start_price:.2f} → Close ${end_price:.2f}")
-        return calculate_performance_from_prices(start_price, end_price)
-    else:
-        print("❌ Could not find prices for specified date range")
-        return None
 
 def calculate_performance_from_prices(start_price, end_price, initial_capital=1000000):
     """
@@ -291,35 +268,6 @@ def compare_with_strategy(buy_hold_data, strategy_return=0.0813, strategy_sharpe
     
     print(border_bot)
 
-def show_usage():
-    """
-    Show how to use this script with real prices from QuantConnect logs
-    """
-    print("\n" + "="*70)
-    print("📊 REAL BUY & HOLD PERFORMANCE CALCULATOR")
-    print("="*70)
-    
-    print(f"\n🎯 PURPOSE:")
-    print(f"   Calculate exact buy & hold performance using SPY prices")
-    print(f"   from your QuantConnect backtest logs (no estimates!)")
-    
-    print(f"\n� HOW TO GET THE REAL PRICES:")
-    print(f"   1. Open your latest backtest URL")
-    print(f"   2. Go to 'Logs' tab")
-    print(f"   3. Search for 'SPY Start Price' and 'SPY End Price'")
-    print(f"   4. Copy those exact prices")
-    
-    print(f"\n⚡ USAGE:")
-    print(f"   python calculate_performance.py <start_price> <end_price>")
-    print(f"   Example: python calculate_performance.py 562.50 578.25")
-    
-    print(f"\n💡 This gives you the EXACT comparison:")
-    print(f"   • Precise buy & hold return using real SPY movement")
-    print(f"   • Exact outperformance calculation")
-    print(f"   • No estimates - real data from your backtest!")
-    
-    print("="*70)
-
 if __name__ == "__main__":
     # Parse command line arguments
     if len(sys.argv) >= 2:
@@ -353,8 +301,14 @@ if __name__ == "__main__":
                 
             except ValueError:
                 print("Invalid price values provided")
-                show_usage()
-        else:
-            show_usage()
     else:
-        show_usage()
+        # Default: run Q3 2025 analysis
+        file_path = "data/spy/SPY_DAILY_1993-01-29_2025-11-04.csv"
+        start_date = "2025-07-01"
+        end_date = "2025-09-30"
+        
+        buy_hold_data = calculate_performance_from_file(file_path, start_date, end_date)
+        if buy_hold_data:
+            compare_with_strategy(buy_hold_data)
+        else:
+            print("ERROR: Could not calculate performance comparison")

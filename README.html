@@ -1,5 +1,4 @@
 # QC Trading Framework - Master Project
-(Markdown Rendering: Ctrl + Shift + V)
 
 <!-- 
 ===============================================================================================================
@@ -8,8 +7,8 @@ PURPOSE: What this project is, master framework concept, links to other docs
 ===============================================================================================================
 -->
 
-**Last Updated:** November 6, 2025  
-**Status:** Successfully Renamed to QC Trading Framework - Ready for Module Extraction
+**Last Updated:** November 5, 2025  
+**Status:** Active Development - Transitioning to Master Framework
 
 ## What This Project Is
 
@@ -88,94 +87,90 @@ make calculate-performance
 
 ## Documentation
 
-This project maintains comprehensive documentation across four focused files:
+This project maintains comprehensive documentation across three focused files:
 
 - **[README.md](README.md)** - This file: High-level project overview and master framework concept
 - **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Detailed workflows, commands, performance analysis tools, and daily operations
 - **[masterplan.md](masterplan.md)** - Future architecture, transformation roadmap, and strategic planning
-- **[CHAT_HISTORY.md](CHAT_HISTORY.md)** - Complete record of strategic planning session and architectural decisions
 
 ### For Different Audiences
 - **New to the project?** Start here (README.md)
 - **Daily development work?** Use PROJECT_GUIDE.md
 - **Architecture and planning?** Reference masterplan.md
-- **Strategic context and decisions?** Review CHAT_HISTORY.md
 
 ## Development Status
 
-### Current Phase: Module Extraction (Step 1 of 7)
-- **Working:** SPY EMA strategy with professional analysis tools, successfully renamed to QC Trading Framework
-- **In Progress:** Ready to begin module extraction and versioning system implementation
+### Current Phase: Transition to Master Framework
+- **Working:** SPY EMA strategy with professional analysis tools
+- **In Progress:** Module extraction and versioning system design
 - **Next:** Strategy template system and production deployment workflow
 
 ### Repository Evolution
-1. **Phase 1 (Completed):** Single strategy with enhanced analysis and successful renaming to QC Trading Framework
-2. **Phase 2 (Current):** Module library and strategy playground development
+1. **Phase 1 (Current):** Single strategy with enhanced analysis
+2. **Phase 2 (Planned):** Module library and strategy playground
 3. **Phase 3 (Future):** Full master framework with production derivatives
 
 ---
-**Repository:** QC_Trading_Framework (successfully renamed from SPY_EMA_Strategy_DEV)  
-**QuantConnect:** Live as "QC_Trading_Framework_DEPLOY"  
+**Repository:** SPY_EMA_Strategy_DEV (transitioning to QC_Trading_Framework)  
 **Contact:** See PROJECT_GUIDE.md for detailed workflows  
-**Planning:** See masterplan.md for architecture roadmap  
-**History:** See CHAT_HISTORY.md for complete strategic planning session
+**Planning:** See masterplan.md for architecture roadmap
 
 ===============================================================================================================
 CURRENT ARCHITECTURE
 ===============================================================================================================
 
 LAYER 1: CORE ALGORITHM
-- main.py - SPY EMA crossover strategy with buy & hold tracking
-- Real-time price collection and benchmark calculation
-- Professional logging and performance comparison output
-- QuantConnect platform integration
+• main.py - SPY EMA crossover strategy with buy & hold tracking
+• Real-time price collection and benchmark calculation
+• Professional logging and performance comparison output
+• QuantConnect platform integration
 
 LAYER 2: PERFORMANCE ANALYSIS SYSTEM
-- calculate_performance.py - Professional performance calculator
-- Real market data integration (TradingView CSV format)
-- Color-coded comparison tables with dynamic formatting
-- Comprehensive risk metrics calculation
+• calculate_performance.py - Professional performance calculator
+• Real market data integration (TradingView CSV format)
+• Color-coded comparison tables with dynamic formatting
+• Comprehensive risk metrics calculation
 
 LAYER 3: DATA & DEPLOYMENT
-- data/spy/ - 32+ years real SPY market data (1993-2025)
-- Makefile automation for deployment workflow
-- Enhanced backtest runner with output capture
-- Clean deployment pipeline to QuantConnect cloud
+• data/spy/ - 32+ years real SPY market data (1993-2025)
+• Makefile automation for deployment workflow
+• Enhanced backtest runner with output capture
+• Clean deployment pipeline to QuantConnect cloud
 
 LAYER 4: DOCUMENTATION & UTILITIES
-- PROJECT_GUIDE.py - Comprehensive project documentation
-- backtest_with_analysis.py - Enhanced backtest workflow
-- Professional development guidelines and workflows
-- Automated performance analysis commands
+• PROJECT_GUIDE.py - Comprehensive project documentation
+• backtest_with_analysis.py - Enhanced backtest workflow
+• Professional development guidelines and workflows
+• Automated performance analysis commands
 
 ===============================================================================================================
 CURRENT IMPLEMENTATION STATUS
 ===============================================================================================================
 
 COMPLETED FEATURES:
-- SPY EMA50/EMA100 crossover strategy
-- Real-time buy & hold benchmark tracking
-- Professional performance comparison system
-- Color-coded terminal output tables
-- Real market data integration (32+ years SPY data)
-- Enhanced backtest workflow with analysis
-- Automated deployment pipeline
-- Comprehensive documentation system
+• SPY EMA50/EMA100 crossover strategy
+• Real-time buy & hold benchmark tracking
+• Professional performance comparison system
+• Color-coded terminal output tables
+• Real market data integration (32+ years SPY data)
+• Enhanced backtest workflow with analysis
+• Automated deployment pipeline
+• Comprehensive documentation system
 
 CURRENT STRATEGY LOGIC:
-- Entry Signal: SPY close price > EMA50
-- Exit Signal: SPY close price < EMA100  
-- Position Sizing: 99% portfolio allocation
-- Risk Management: Basic position management
-- Benchmark Tracking: Real-time SPY price collection
+• Entry Signal: SPY close price > EMA50
+• Exit Signal: SPY close price < EMA100  
+• Position Sizing: 99% portfolio allocation
+• Risk Management: Basic position management
+• Benchmark Tracking: Real-time SPY price collection
 
 PERFORMANCE ANALYSIS CAPABILITIES:
-- Exact buy & hold calculation using opening prices
-- Comprehensive risk metrics (Sharpe, drawdown, volatility)
-- Color-coded performance comparison (Green/Red indicators)
-- Support for any date range analysis
-- Professional table formatting with proper alignment
-- Real market data for accurate calculations
+• Exact buy & hold calculation using opening prices
+• Comprehensive risk metrics (Sharpe, drawdown, volatility)
+• Color-coded performance comparison (Green/Red indicators)
+• Support for any date range analysis
+• Professional table formatting with proper alignment
+• Real market data for accurate calculations
 
 ===============================================================================================================
 DEVELOPMENT WORKFLOW
@@ -196,30 +191,30 @@ PERFORMANCE ANALYSIS WORKFLOW:
 5. Document results and insights in PROJECT_GUIDE.py
 
 COMMAND REFERENCE:
-- make push - Deploy algorithm to QuantConnect
-- make backtest-enhanced - Run backtest with analysis
-- make calculate-performance - Generate performance comparison
-- python calculate_performance.py --file [data] --start [date] --end [date]
-- python PROJECT_GUIDE.py - View complete project documentation
+• make push - Deploy algorithm to QuantConnect
+• make backtest-enhanced - Run backtest with analysis
+• make calculate-performance - Generate performance comparison
+• python calculate_performance.py --file [data] --start [date] --end [date]
+• python PROJECT_GUIDE.py - View complete project documentation
 
 ===============================================================================================================
 TECHNICAL SPECIFICATIONS
 ===============================================================================================================
 
 ALGORITHM SPECIFICATIONS:
-- Platform: QuantConnect cloud platform
-- Language: Python 3.x
-- Asset: SPY (S&P 500 ETF)
-- Strategy Type: EMA crossover with trend following
-- Timeframe: Daily data analysis
-- Capital: $1,000,000 initial (configurable)
+• Platform: QuantConnect cloud platform
+• Language: Python 3.x
+• Asset: SPY (S&P 500 ETF)
+• Strategy Type: EMA crossover with trend following
+• Timeframe: Daily data analysis
+• Capital: $1,000,000 initial (configurable)
 
 DATA SPECIFICATIONS:
-- Data Source: TradingView historical data
-- Data Range: 1993-01-29 to 2025-11-04 (32+ years)
-- Data Format: CSV with time,open,high,low,close columns
-- Data Points: 8,249 trading days
-- Update Frequency: Manual updates from TradingView
+• Data Source: TradingView historical data
+• Data Range: 1993-01-29 to 2025-11-04 (32+ years)
+• Data Format: CSV with time,open,high,low,close columns
+• Data Points: 8,249 trading days
+• Update Frequency: Manual updates from TradingView
 
 PERFORMANCE METRICS:
 • Total Return (Strategy vs Buy & Hold)

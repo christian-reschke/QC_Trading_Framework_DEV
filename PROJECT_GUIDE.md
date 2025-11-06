@@ -1,4 +1,5 @@
-# SPY EMA Strategy Project - Developer Guide
+# QC Trading Framework - Developer Guide
+(Markdown Rendering: Ctrl + Shift + V)
 
 <!-- 
 ===============================================================================================================
@@ -7,23 +8,23 @@ PURPOSE: Current workflows, commands, performance analysis tools, daily operatio
 ===============================================================================================================
 -->
 
-**Last Updated:** November 5, 2025  
-**Project Status:** Enhanced Performance Analysis System Complete  
+**Last Updated:** November 6, 2025  
+**Project Status:** Successfully Renamed to QC Trading Framework - Enhanced Performance Analysis Complete  
 **Architecture:** Development + Deployment separation with professional benchmarking tools
 
 ## Dual Project Structure
 
-### Development Project: d:\QC\SPY_EMA_Strategy_DEV\
+### Development Project: d:\QC\SPY_EMA_Strategy_DEV\ (to be renamed)
 - Complete C# framework with all modules and tests
 - Full project history and development files
 - Python algorithm development and testing
 - Documentation and research files
-- Git repository (when restored)
+- Git repository
 
-### Deployment Project: d:\QC\SPY_EMA_Strategy_DEPLOY\
+### Deployment Project: d:\QC\QC_Trading_Framework_DEPLOY\
 - ONLY essential QuantConnect files (main.py, config.json, research.ipynb)
 - Clean project structure for cloud deployment
-- No special characters, no development artifacts
+- Successfully renamed and deployed as "QC_Trading_Framework_DEPLOY"
 - Direct push to QuantConnect without conflicts
 
 ## Enhanced Performance Analysis System
@@ -58,12 +59,12 @@ python calculate_performance.py --file "data/spy/SPY_DAILY_1993-01-29_2025-11-04
 ### Current Q3 2025 Performance Results
 **Strategy vs Buy & Hold Analysis (2025-07-01 to 2025-09-30)**
 
-| Metric | Strategy | Buy & Hold | Comparison |
-|--------|----------|------------|------------|
-| **Total Return** | 8.13% | 8.51% | ❌ -0.38% |
-| **Sharpe Ratio** | 2.601 | 3.868 | ❌ -1.267 |
-| **Max Drawdown** | 2.40% | 2.13% | ❌ +0.27% |
-| **Volatility** | 3.13% | 2.20% | ❌ +0.93% |
+| Metric       | Strategy | Buy & Hold | Comparison |
+|--------------|----------|------------|------------|
+| Total Return | 8.13%    | 8.51%      |  -0.38%    |
+| Sharpe Ratio | 2.601    | 3.868      |  -1.267    |
+| Max Drawdown | 2.40%    | 2.13%      |  +0.27%    |
+| Volatility   | 3.13%    | 2.20%      |  +0.93%    |
 
 **Analysis:** Buy & hold outperformed with better risk-adjusted returns and lower volatility.
 
@@ -80,13 +81,13 @@ data/spy/              # Real market data files
 
 ### Development Commands
 ```bash
-# Enhanced backtest with analysis
+# Complete backtest workflow with automatic analysis
 make backtest-enhanced
 
 # Deploy to QuantConnect 
 make push
 
-# Performance analysis with color-coded tables
+# Performance analysis (standalone)
 make calculate-performance
 
 # Quick local testing
@@ -121,24 +122,25 @@ make test              # Run unit tests
 3. **Return Calculation:** (End Price - Start Price) / Start Price
 4. **Risk Metrics:** Calculate from daily returns using real price movements
 
-## Enhanced Backtest Workflow
+### Enhanced Backtest Workflow
 
 ### Full Analysis Pipeline
 ```bash
 # 1. Deploy algorithm to QuantConnect
 make push
 
-# 2. Run backtest on cloud platform
-# (Manual step in QuantConnect web interface)
+# 2. Run backtest with automatic performance analysis
+make backtest-enhanced
 
-# 3. Analyze results with real market data
+# 3. Optional: Standalone performance analysis
 make calculate-performance
 ```
 
 ### Performance Analysis Integration
-- Algorithm tracks both strategy and buy & hold performance
-- Real market data provides exact benchmark calculations
-- Color-coded tables show immediate performance comparison
+- Algorithm deployment to QuantConnect cloud
+- Automated backtest execution with clean output
+- Automatic performance comparison using real market data
+- Clean comparison tables show immediate performance vs buy & hold
 - Professional metrics for comprehensive analysis
 
 ## C# Framework Components
@@ -184,13 +186,14 @@ dotnet test tests/unit/MetricsTests.cs
 ## Project File Organization
 
 ### Current Working Files
-- `main.py` - Primary algorithm implementation
-- `config.json` - Algorithm configuration
+- `main.py` - QCTradingFramework algorithm implementation (renamed from SPYEMACrossoverStrategy)
+- `config.json` - Algorithm configuration with framework description
 - `calculate_performance.py` - Performance analysis tool
-- `Makefile` - Build and deployment commands
+- `Makefile` - Build and deployment commands (updated for new naming)
 - `PROJECT_GUIDE.md` - This operational guide
 - `README.md` - Project overview and master framework concept
 - `masterplan.md` - Future architecture and strategic planning
+- `CHAT_HISTORY.md` - Complete record of strategic planning session
 
 ### Documentation Standards
 - **README.md** - High-level project overview
@@ -249,4 +252,6 @@ ls ../SPY_EMA_Strategy_DEPLOY/
 ```
 
 ---
-**Next Steps:** See masterplan.md for future architecture planning and framework transformation roadmap.
+**Current Status:** Successfully renamed to QC Trading Framework and deployed to QuantConnect  
+**Next Steps:** Begin Step 1 - Module Extraction as outlined in masterplan.md  
+**Reference:** See CHAT_HISTORY.md for complete strategic planning session record

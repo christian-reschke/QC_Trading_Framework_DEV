@@ -13,8 +13,7 @@ def run_backtest_with_capture():
     """
     Run the backtest and try to capture output for analysis
     """
-    print("\n🚀 RUNNING BACKTEST WITH PERFORMANCE CAPTURE...")
-    print("="*70)
+    print("Running backtest with performance capture...")
     
     try:
         # Get project paths
@@ -23,9 +22,6 @@ def run_backtest_with_capture():
         project_name = os.path.basename(current_dir)
         deploy_name = project_name.replace('_DEV', '_DEPLOY')
         
-        print(f"📁 Project: {deploy_name}")
-        print(f"📍 Location: {parent_dir}")
-        
         # Change to parent directory for lean command
         os.chdir(parent_dir)
         
@@ -33,40 +29,24 @@ def run_backtest_with_capture():
         lean_exe = r"C:\Users\chris\pipx\venvs\lean\Scripts\lean.exe"
         cmd = [lean_exe, "cloud", "backtest", deploy_name]
         
-        print(f"\n⚡ Executing: {' '.join(cmd)}")
-        print("-"*50)
+        # Run the lean backtest command with live output
+        print(f"Executing: {' '.join(cmd)}")
+        result = subprocess.run(cmd, text=True, timeout=300)
         
-        # Run and capture output
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        
-        # Display the output
-        if result.stdout:
-            print(result.stdout)
-        
-        if result.stderr:
-            print("STDERR:", result.stderr)
-        
-        # Try to extract backtest URL for logs
-        backtest_url_match = re.search(r'Backtest url: (https://[^\s]+)', result.stdout)
-        if backtest_url_match:
-            backtest_url = backtest_url_match.group(1)
-            print(f"\n🔗 BACKTEST URL: {backtest_url}")
-            
-            # Store URL for easy access
-            with open('latest_backtest_url.txt', 'w') as f:
-                f.write(f"{backtest_url}\n")
-                f.write(f"Generated: {datetime.now()}\n")
+        # Since we can't easily capture the URL with live output,
+        # we'll let the user see the URL in the live output
+        backtest_url = None
         
         # Change back to original directory
         os.chdir(current_dir)
         
-        return result.returncode == 0, backtest_url if backtest_url_match else None
+        return result.returncode == 0, backtest_url
         
     except subprocess.TimeoutExpired:
-        print("❌ Backtest timed out after 5 minutes")
+        print("ERROR: Backtest timed out after 5 minutes")
         return False, None
     except Exception as e:
-        print(f"❌ Error running backtest: {e}")
+        print(f"ERROR: Error running backtest: {e}")
         return False, None
 
 def extract_performance_from_output(output_text):
@@ -157,21 +137,21 @@ def display_real_performance_comparison(performance_data):
     Display the actual calculated performance comparison
     """
     print("\n" + "="*70)
-    print("� ACTUAL PERFORMANCE COMPARISON (FROM ALGORITHM)")
+    print("ACTUAL PERFORMANCE COMPARISON (FROM ALGORITHM)")
     print("="*70)
     
     if not performance_data:
-        print("❌ Could not extract performance data from logs")
+        print("ERROR: Could not extract performance data from logs")
         print("   The detailed comparison should be in the QuantConnect logs")
         return
     
-    print(f"\n🎯 STRATEGY PERFORMANCE:")
+    print(f"\nSTRATEGY PERFORMANCE:")
     if 'strategy_final' in performance_data:
         print(f"   Final Portfolio Value: ${performance_data['strategy_final']:,}")
     if 'strategy_return' in performance_data:
         print(f"   Total Return: {performance_data['strategy_return']:.2f}%")
     
-    print(f"\n📈 BUY & HOLD BENCHMARK:")
+    print(f"\nBUY & HOLD BENCHMARK:")
     if 'spy_start' in performance_data and 'spy_end' in performance_data:
         print(f"   SPY Start Price: ${performance_data['spy_start']:.2f}")
         print(f"   SPY End Price: ${performance_data['spy_end']:.2f}")
@@ -180,15 +160,15 @@ def display_real_performance_comparison(performance_data):
     if 'buy_hold_final' in performance_data:
         print(f"   Buy & Hold Final Value: ${performance_data['buy_hold_final']:,}")
     
-    print(f"\n⚡ COMPARISON RESULTS:")
+    print(f"\nCOMPARISON RESULTS:")
     if 'outperformance' in performance_data:
         if performance_data.get('outperformed', False):
-            print(f"   ✅ Strategy OUTPERFORMED by {performance_data['outperformance']:.2f}%")
+            print(f"   SUCCESS: Strategy OUTPERFORMED by {performance_data['outperformance']:.2f}%")
         else:
-            print(f"   ❌ Strategy UNDERPERFORMED by {abs(performance_data['outperformance']):.2f}%")
+            print(f"   RESULT: Strategy UNDERPERFORMED by {abs(performance_data['outperformance']):.2f}%")
     
     if 'trading_days' in performance_data:
-        print(f"\n� TRADING STATISTICS:")
+        print(f"\nTRADING STATISTICS:")
         print(f"   Trading Days: {performance_data['trading_days']}")
         
         if 'annualized_strategy' in performance_data:
@@ -201,21 +181,29 @@ def display_real_performance_comparison(performance_data):
 if __name__ == "__main__":
     success, url = run_backtest_with_capture()
     
-    # Try to get the latest backtest logs to extract real performance data
-    # For now, we'll need to access the QuantConnect logs directly
-    # Let's provide guidance on how to get the real data
-    
-    print("\n" + "="*70)
-    print("📊 REAL PERFORMANCE DATA EXTRACTION")
-    print("="*70)
-    print("\n⚠️  To get the ACTUAL buy & hold comparison:")
-    print(f"   1. Open: {url if url else 'Latest backtest URL'}")
-    print("   2. Go to 'Logs' tab")
-    print("   3. Look for 'BACKTEST COMPLETE - PERFORMANCE COMPARISON'")
-    print("   4. You'll see the REAL calculated values:")
-    print("      • Exact SPY start/end prices")
-    print("      • Precise buy & hold return %")
-    print("      • Actual outperformance calculation")
-    print("\n💡 This shows the REAL data from our price array calculation!")
-    print("   No estimates - actual SPY price movement vs strategy performance")
-    print("="*70)
+    # Automatically run performance analysis using our CSV data
+    if success:
+        print("\n" + "="*70)
+        print("PERFORMANCE ANALYSIS")
+        print("="*70)
+        
+        # Import and run the performance calculator
+        try:
+            from calculate_performance import calculate_performance_from_file, compare_with_strategy
+            
+            # Use Q3 2025 date range for current analysis
+            file_path = "data/spy/SPY_DAILY_1993-01-29_2025-11-04.csv"
+            start_date = "2025-07-01"
+            end_date = "2025-09-30"
+            
+            buy_hold_data = calculate_performance_from_file(file_path, start_date, end_date)
+            if buy_hold_data:
+                compare_with_strategy(buy_hold_data)
+            else:
+                print("ERROR: Could not calculate performance comparison")
+                
+        except Exception as e:
+            print(f"ERROR: Error running performance analysis: {e}")
+            print("You can run manually with: make calculate-performance")
+        
+        print("="*70)

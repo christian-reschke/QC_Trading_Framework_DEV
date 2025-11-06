@@ -2,15 +2,23 @@
 from AlgorithmImports import *
 # endregion
 
-class SPYEMACrossoverStrategy(QCAlgorithm):
+class QCTradingFramework(QCAlgorithm):
     """
-    SPY EMA Crossover Strategy - QuantConnect Implementation
+    QC Trading Framework - Master Development Environment
+    
+    Current Implementation: SPY EMA Crossover Strategy
     
     Strategy Rules:
     - BUY SPY when close price crosses ABOVE EMA50
     - SELL SPY when close price crosses BELOW EMA100  
     - Position Size: 100% of available cash
     - Timeframe: Daily
+    
+    Framework Features:
+    - Modular trading components
+    - Performance analysis with buy & hold benchmarking
+    - Real market data integration
+    - Production-ready strategy export capabilities
     """
     # test comment 4 - simplified buy and hold tracking with price array
     
