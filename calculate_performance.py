@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Calculate buy & hold performance from SPY price data directly
+Calculate buy & hold performance from symbol price data directly
 This bypasses the need to parse logs - we calculate it ourselves with real data
 """
 
@@ -8,17 +8,40 @@ from datetime import datetime, date
 import sys
 import os
 import csv
+import glob
+from utils import print_error
 
-def read_spy_data_from_csv(file_path):
+def find_symbol_data_file(symbol):
     """
-    Read SPY price data from CSV file
+    Find the data file for a given symbol, looking for any daily data file
+    Returns the path to the first matching file found
+    """
+    data_dir = f"data/{symbol.lower()}"
+    if not os.path.exists(data_dir):
+        print_error(f"Data directory not found: {data_dir}")
+        return None
+    
+    # Look for any daily data file for this symbol
+    pattern = f"{data_dir}/{symbol}_DAILY_*.csv"
+    matching_files = glob.glob(pattern)
+    
+    if not matching_files:
+        print_error(f"No daily data files found for {symbol} in {data_dir}")
+        return None
+    
+    # Return the first matching file (should usually be only one)
+    return matching_files[0]
+
+def read_symbol_data_from_csv(file_path):
+    """
+    Read symbol price data from CSV file
     Supports both standard format (Date,Open,High,Low,Close,Volume) 
     and TradingView format (time,open,high,low,close)
     """
     data = []
     
     if not os.path.exists(file_path):
-        print(f"File not found: {file_path}")
+        print_error(f"File not found: {file_path}")
         return None
         
     try:
@@ -58,7 +81,7 @@ def read_spy_data_from_csv(file_path):
         return data
         
     except Exception as e:
-        print(f"Error reading CSV file: {e}")
+        print_error(f"Error reading CSV file: {e}")
         return None
 
 def get_price_for_date_range(data, start_date, end_date):
@@ -148,7 +171,7 @@ def calculate_performance_from_file(file_path, start_date=None, end_date=None, i
     Calculate performance from CSV data file
     Uses opening price of start date and closing price of end date
     """
-    data = read_spy_data_from_csv(file_path)
+    data = read_symbol_data_from_csv(file_path)
     if not data:
         return None
         
@@ -197,7 +220,7 @@ def calculate_performance_from_prices(start_price, end_price, initial_capital=10
         'return': buy_hold_return
     }
 
-def compare_with_strategy(buy_hold_data, strategy_return=0.0056, strategy_sharpe=-0.54, strategy_drawdown=0.118):
+def compare_with_strategy(buy_hold_data, strategy_return, strategy_sharpe, strategy_drawdown, timeframe_label="Strategy"):
     """
     Compare buy & hold with strategy performance in clean table format
     """
@@ -209,9 +232,9 @@ def compare_with_strategy(buy_hold_data, strategy_return=0.0056, strategy_sharpe
     RED = '\033[91m'    # Bright red for worse performance
     RESET = '\033[0m'   # Reset to default color
     
-    # Define table structure based on first column width
+    # Define table structure with wider columns
     col1_width = 21  # "│ Metric              │" = 21 chars
-    col_width = max(15, col1_width - 4)  # min. 15
+    col_width = 19   # Wider columns for better readability
     
     # Create dynamic borders based on column widths
     border_top = f"┌{'─' * col1_width}┬{'─' * col_width}┬{'─' * col_width}┐"
@@ -220,7 +243,7 @@ def compare_with_strategy(buy_hold_data, strategy_return=0.0056, strategy_sharpe
     
     # Headers with proper padding
     header_col2 = "Buy & Hold".center(col_width - 1) + " "
-    header_col3 = "Strategy".center(col_width - 1) + " "
+    header_col3 = timeframe_label.center(col_width - 1) + " "
     
     # Just the table with proper padding
     print(border_top)
@@ -231,7 +254,7 @@ def compare_with_strategy(buy_hold_data, strategy_return=0.0056, strategy_sharpe
     start_value = buy_hold_data.get('start_value', 1000000)
     bh_start = f"$ {start_value:,.0f} ".rjust(col_width)
     strategy_start = f"$ {start_value:,.0f} ".rjust(col_width)
-    print(f"│ Start Value         │{bh_start}│{strategy_start}│")
+    # print(f"│ Start Value         │{bh_start}│{strategy_start}│")  # Commented out - shown in header now
     
     # Final Value
     bh_final = buy_hold_data['final_value']
@@ -301,10 +324,17 @@ if __name__ == "__main__":
                 compare_with_strategy(buy_hold_data)
                 
             except ValueError:
-                print("Invalid price values provided")
+                print_error("Invalid price values provided")
     else:
-        # Default: run Q3 2025 analysis
-        file_path = "data/spy/SPY_DAILY_1993-01-29_2025-11-04.csv"
+        # Default: run Q3 2025 analysis using symbol from config
+        try:
+            from strategy_config import SYMBOL
+            file_path = find_symbol_data_file(SYMBOL)
+        except ImportError:
+            # Fallback if strategy_config is not available - try to find any symbol data
+            print_error("No strategy_config found - unable to determine symbol")
+            sys.exit(1)
+            
         start_date = "2025-07-01"
         end_date = "2025-09-30"
         
@@ -312,4 +342,4 @@ if __name__ == "__main__":
         if buy_hold_data:
             compare_with_strategy(buy_hold_data)
         else:
-            print("ERROR: Could not calculate performance comparison")
+            print_error("Could not calculate performance comparison")

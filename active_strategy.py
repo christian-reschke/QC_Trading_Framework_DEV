@@ -1,11 +1,11 @@
 """
-Vola Breakout Strategy
+Vola Breakout Strategy - Dynamic Timeframe
 
 Strategy Rules:
 - Entry: inTrend AND isLowBBW AND breakAboveBB AND breakAboveRecentHigh
 - Exit: Trailing stop loss
 - Position Size: 99% of available cash
-- Timeframe: Daily
+- Timeframe: Configurable via TIMEFRAME_MINUTES (using BarBuilder)
 
 Entry Conditions:
 1. inTrend = price > ema and ema > ema[1]          # EMA trend filter
@@ -14,25 +14,35 @@ Entry Conditions:
 4. breakAboveRecentHigh = close > ta.highest(high, 5)[1]  # Recent high momentum confirmation
 
 Exit: Trailing stop
+
+Configuration: Change TIMEFRAME_MINUTES in the class to adjust timeframe
 """
 
 from AlgorithmImports import *
 from framework.interfaces import IStrategy
+from framework.bar_builder import BarBuilder
+from strategy_config import TIMEFRAME_MINUTES, START_DATE, END_DATE, STARTING_CAPITAL, STRATEGY_VERSION, SYMBOL
 
 
 class VolaBreakoutStrategy(IStrategy):
-    """Volatility Breakout Strategy Implementation"""
+    """Volatility Breakout Strategy Implementation - Dynamic Timeframe"""
     
     def initialize(self, algorithm):
         """Initialize the strategy"""
         self.algorithm = algorithm
         
-        # Set backtest period for consistent analysis
-        algorithm.SetStartDate(2024, 1, 1)
-        algorithm.SetEndDate(2024, 12, 31)
-        algorithm.SetCash(100000)
+        # Set backtest period from centralized configuration
+        start_parts = START_DATE.split("-")
+        end_parts = END_DATE.split("-")
+        algorithm.SetStartDate(int(start_parts[0]), int(start_parts[1]), int(start_parts[2]))
+        algorithm.SetEndDate(int(end_parts[0]), int(end_parts[1]), int(end_parts[2]))
+        algorithm.SetCash(STARTING_CAPITAL)
         
-        self.symbol = algorithm.AddEquity("SPY", Resolution.DAILY).Symbol
+        # Use MINUTE resolution as base for custom bar building
+        self.symbol = algorithm.AddEquity(SYMBOL, Resolution.MINUTE).Symbol
+        
+        # Initialize bar builder with dynamic timeframe
+        self.bar_builder = BarBuilder(algorithm, self.symbol, TIMEFRAME_MINUTES, self.on_bar_completed)
         
         # Strategy parameters
         self.ema_period = 50
@@ -42,74 +52,60 @@ class VolaBreakoutStrategy(IStrategy):
         self.recent_high_period = 5
         self.trail_percent = 0.05  # 5% trailing stop
         
-        # Indicators
-        self.ema = algorithm.EMA(self.symbol, self.ema_period)
-        self.bb = algorithm.BB(self.symbol, self.bb_period, self.bb_std)
+        # Manual indicator tracking (since we use custom bars)
+        self.ema_values = []
+        self.bb_values = []  # Store tuples of (upper, middle, lower)
+        self.price_history = []
+        self.high_history = []
         
         # State tracking
         self.position_entry_price = None
         self.highest_price_since_entry = None
         
-        # Warm up indicators
-        algorithm.SetWarmUp(max(self.ema_period, self.bb_period) + self.recent_high_period)
-        
-        # Setup debugging plots
-        self._setup_debug_plots(algorithm)
-        
-        algorithm.Log(f"Vola Breakout Strategy initialized - EMA{self.ema_period}, BB{self.bb_period}, Trail{self.trail_percent:.1%}")
-
-    def _setup_debug_plots(self, algorithm):
-        """Setup debugging charts for strategy analysis"""
-        
-        # 1. Price and Moving Averages Chart
-        price_chart = Chart("Price & Indicators")
-        price_chart.AddSeries(Series("SPY Price", SeriesType.Line, "$", Color.Blue))
-        price_chart.AddSeries(Series("EMA50", SeriesType.Line, "$", Color.Orange))
-        price_chart.AddSeries(Series("BB Upper", SeriesType.Line, "$", Color.Red))
-        price_chart.AddSeries(Series("BB Lower", SeriesType.Line, "$", Color.Red))
-        price_chart.AddSeries(Series("BB Middle", SeriesType.Line, "$", Color.Gray))
-        algorithm.AddChart(price_chart)
-        
-        # 2. Bollinger Band Width Chart (key volatility indicator)
-        bbw_chart = Chart("Bollinger Band Width")
-        bbw_chart.AddSeries(Series("BBW", SeriesType.Line, "", Color.Purple))
-        bbw_chart.AddSeries(Series("BBW Threshold", SeriesType.Line, "", Color.Red))
-        algorithm.AddChart(bbw_chart)
-        
-        # 3. Entry Conditions Chart
-        conditions_chart = Chart("Entry Conditions")
-        conditions_chart.AddSeries(Series("Trend OK", SeriesType.Flag, "", Color.Green))
-        conditions_chart.AddSeries(Series("Low Vol OK", SeriesType.Flag, "", Color.Blue))
-        conditions_chart.AddSeries(Series("BB Breakout OK", SeriesType.Flag, "", Color.Orange))
-        conditions_chart.AddSeries(Series("Momentum OK", SeriesType.Flag, "", Color.Purple))
-        conditions_chart.AddSeries(Series("Entry Signal", SeriesType.Flag, "", Color.Red))
-        algorithm.AddChart(conditions_chart)
-        
-        # 4. Position and Performance Chart
-        position_chart = Chart("Position & Performance")
-        position_chart.AddSeries(Series("Position Value", SeriesType.Line, "$", Color.Green))
-        position_chart.AddSeries(Series("Cash", SeriesType.Line, "$", Color.Blue))
-        position_chart.AddSeries(Series("Total Portfolio", SeriesType.Line, "$", Color.Black))
-        algorithm.AddChart(position_chart)
+        algorithm.Log(f"VOLA BREAKOUT STRATEGY ({TIMEFRAME_MINUTES}MIN) INITIALIZED - Bar Builder: {TIMEFRAME_MINUTES} minutes")
+        algorithm.Log(f"STRATEGY_VERSION: {STRATEGY_VERSION}")  # Version verification
+        algorithm.SetRuntimeStatistic("Strategy Version", STRATEGY_VERSION)
+        algorithm.Log(f"Strategy Parameters: EMA{self.ema_period}, BB{self.bb_period}, Trail{self.trail_percent:.1%}")
 
     def on_data(self, algorithm, data):
-        """Process new market data"""
+        """Process new market data - feeds into bar builder"""
         if not data.ContainsKey(self.symbol) or data[self.symbol] is None:
             return
             
         if algorithm.IsWarmingUp:
             return
         
-        bar = data[self.symbol]
+        # Update the bar builder with new minute data
+        self.bar_builder.update(data)
+
+    def on_bar_completed(self, bar):
+        """Handle completed bar (timeframe determined by TIMEFRAME_MINUTES)"""
+        algorithm = self.algorithm
         current_price = bar.Close
         current_holdings = algorithm.Portfolio[self.symbol].Quantity
         
+        # DEBUG: Log every bar completion
+        algorithm.Log(f"{TIMEFRAME_MINUTES}MIN BAR COMPLETED: {bar.Time} | O:{bar.Open:.2f} H:{bar.High:.2f} L:{bar.Low:.2f} C:{bar.Close:.2f}")
+        
+        # Update price and high history
+        self.price_history.append(current_price)
+        self.high_history.append(bar.High)
+        
+        # Keep only needed history (for indicators and lookbacks)
+        max_history = max(self.ema_period, self.bb_period) + self.recent_high_period + 10
+        if len(self.price_history) > max_history:
+            self.price_history = self.price_history[-max_history:]
+            self.high_history = self.high_history[-max_history:]
+        
+        # Update indicators
+        self._update_indicators(bar)
+        
         # Plot current data for debugging
-        self._plot_debug_data(algorithm, current_price)
+        self._plot_debug_data(algorithm, current_price, bar)
         
         # Entry logic
         if current_holdings == 0:
-            if self._check_entry_conditions(current_price):
+            if self._check_entry_conditions(current_price, bar):
                 # Calculate position size (99% of portfolio)
                 cash_to_invest = algorithm.Portfolio.Cash * 0.99
                 shares_to_buy = int(cash_to_invest / current_price)
@@ -118,13 +114,13 @@ class VolaBreakoutStrategy(IStrategy):
                     algorithm.MarketOrder(self.symbol, shares_to_buy)
                     self.position_entry_price = current_price
                     self.highest_price_since_entry = current_price
-                    algorithm.Log(f"ENTRY: Bought {shares_to_buy} shares of SPY at ${current_price:.2f}")
+                    algorithm.Log(f"ENTRY: Bought {shares_to_buy} shares of {SYMBOL} at ${current_price:.2f} ({TIMEFRAME_MINUTES}min bar)")
         
         # Exit logic (trailing stop)
         elif current_holdings > 0:
             if self._check_exit_conditions(current_price):
                 algorithm.Liquidate(self.symbol)
-                algorithm.Log(f"EXIT: Sold SPY at ${current_price:.2f} (Entry: ${self.position_entry_price:.2f})")
+                algorithm.Log(f"EXIT: Sold {SYMBOL} at ${current_price:.2f} (Entry: ${self.position_entry_price:.2f}) ({TIMEFRAME_MINUTES}min bar)")
                 self.position_entry_price = None
                 self.highest_price_since_entry = None
             else:
@@ -132,87 +128,118 @@ class VolaBreakoutStrategy(IStrategy):
                 if current_price > self.highest_price_since_entry:
                     self.highest_price_since_entry = current_price
 
-    def _check_entry_conditions(self, current_price):
+    def _update_indicators(self, bar):
+        """Update EMA and Bollinger Bands manually"""
+        if len(self.price_history) < 2:
+            return
+            
+        # Update EMA
+        if len(self.ema_values) == 0:
+            # First EMA value is just the price
+            self.ema_values.append(bar.Close)
+        else:
+            # EMA formula: EMA = (Price * (2/(period+1))) + (Previous EMA * (1 - (2/(period+1))))
+            multiplier = 2.0 / (self.ema_period + 1)
+            ema = (bar.Close * multiplier) + (self.ema_values[-1] * (1 - multiplier))
+            self.ema_values.append(ema)
+        
+        # Update Bollinger Bands (need at least bb_period values)
+        if len(self.price_history) >= self.bb_period:
+            recent_prices = self.price_history[-self.bb_period:]
+            sma = sum(recent_prices) / len(recent_prices)
+            
+            # Calculate standard deviation
+            variance = sum((price - sma) ** 2 for price in recent_prices) / len(recent_prices)
+            std_dev = variance ** 0.5
+            
+            bb_upper = sma + (self.bb_std * std_dev)
+            bb_lower = sma - (self.bb_std * std_dev)
+            bb_middle = sma
+            
+            self.bb_values.append((bb_upper, bb_middle, bb_lower))
+            
+            # Keep reasonable history
+            if len(self.bb_values) > 100:
+                self.bb_values = self.bb_values[-50:]
+        
+        # Keep reasonable EMA history
+        if len(self.ema_values) > 100:
+            self.ema_values = self.ema_values[-50:]
+
+    def _check_entry_conditions(self, current_price, bar):
         """Check all entry conditions"""
-        if not self.ema.IsReady or not self.bb.IsReady:
+        # Need sufficient data for all indicators
+        if len(self.ema_values) < 2 or len(self.bb_values) < 1:
             return False
         
-        # Get historical data for trend and momentum checks
-        history = self.algorithm.History(self.symbol, self.recent_high_period + 2, Resolution.DAILY)
-        if history.empty or len(history) < self.recent_high_period + 2:
+        if len(self.price_history) < self.recent_high_period + 2:
             return False
         
-        # 1. inTrend = price > ema and ema > ema[1]
-        ema_current = self.ema.Current.Value
-        prev_close = float(history.iloc[-2]['close'])
+        # 1. inTrend = price > ema and price rising
+        ema_current = self.ema_values[-1]
+        prev_price = self.price_history[-2]
+        in_trend = current_price > ema_current and current_price > prev_price
         
-        # Simple trend check: price above EMA and price rising
-        in_trend = current_price > ema_current and current_price > prev_close
-        
-        # 2. isLowBBW = isReady and bbw < bbwThreshold
-        bb_upper = self.bb.UpperBand.Current.Value
-        bb_lower = self.bb.LowerBand.Current.Value
-        bb_middle = self.bb.MiddleBand.Current.Value
-        bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 1.0  # Normalized BBW
+        # 2. isLowBBW = bbw < bbwThreshold
+        bb_upper, bb_middle, bb_lower = self.bb_values[-1]
+        bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 1.0
         is_low_bbw = bb_width < self.bbw_threshold
         
         # 3. breakAboveBB = close > bbUpper
         break_above_bb = current_price > bb_upper
         
-        # 4. breakAboveRecentHigh = close > ta.highest(high, 5)[1]
-        # Get highest high of last 5 days using history
-        try:
-            recent_highs = history['high'].iloc[-(self.recent_high_period+1):-1]  # Exclude today
-            recent_high = float(recent_highs.max())
+        # 4. breakAboveRecentHigh = close > highest(high, 5)[1]
+        if len(self.high_history) >= self.recent_high_period + 1:
+            recent_highs = self.high_history[-(self.recent_high_period+1):-1]  # Exclude current bar
+            recent_high = max(recent_highs)
             break_above_recent_high = current_price > recent_high
-        except:
+        else:
             break_above_recent_high = False
         
         # All conditions must be true
         entry_signal = in_trend and is_low_bbw and break_above_bb and break_above_recent_high
         
         if entry_signal:
-            self.algorithm.Log(f"ENTRY SIGNAL: Price=${current_price:.2f}, EMA=${ema_current:.2f}, BBW={bb_width:.3f}, BB_Upper=${bb_upper:.2f}, Recent_High=${recent_high:.2f}")
+            self.algorithm.Log(f"ENTRY SIGNAL ({TIMEFRAME_MINUTES}min): Price=${current_price:.2f}, EMA=${ema_current:.2f}, BBW={bb_width:.3f}, BB_Upper=${bb_upper:.2f}, Recent_High=${recent_high:.2f}")
         
         return entry_signal
 
-    def _plot_debug_data(self, algorithm, current_price):
+    def _plot_debug_data(self, algorithm, current_price, bar):
         """Plot debugging data to charts"""
-        if not self.ema.IsReady or not self.bb.IsReady:
+        if len(self.ema_values) == 0 or len(self.bb_values) == 0:
             return
             
         # Plot Price & Indicators
-        algorithm.Plot("Price & Indicators", "SPY Price", current_price)
-        algorithm.Plot("Price & Indicators", "EMA50", self.ema.Current.Value)
-        algorithm.Plot("Price & Indicators", "BB Upper", self.bb.UpperBand.Current.Value)
-        algorithm.Plot("Price & Indicators", "BB Lower", self.bb.LowerBand.Current.Value)
-        algorithm.Plot("Price & Indicators", "BB Middle", self.bb.MiddleBand.Current.Value)
+        algorithm.Plot("Price & Indicators", f"{SYMBOL} Price", current_price)
+        algorithm.Plot("Price & Indicators", "EMA50", self.ema_values[-1])
+        
+        bb_upper, bb_middle, bb_lower = self.bb_values[-1]
+        algorithm.Plot("Price & Indicators", "BB Upper", bb_upper)
+        algorithm.Plot("Price & Indicators", "BB Lower", bb_lower)
+        algorithm.Plot("Price & Indicators", "BB Middle", bb_middle)
         
         # Plot Bollinger Band Width
-        bb_upper = self.bb.UpperBand.Current.Value
-        bb_lower = self.bb.LowerBand.Current.Value
-        bb_middle = self.bb.MiddleBand.Current.Value
         bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 0
-        
         algorithm.Plot("Bollinger Band Width", "BBW", bb_width)
         algorithm.Plot("Bollinger Band Width", "BBW Threshold", self.bbw_threshold)
         
         # Plot Entry Conditions (as flags when true)
         try:
-            history = algorithm.History(self.symbol, self.recent_high_period + 2, Resolution.DAILY)
-            if not history.empty and len(history) >= self.recent_high_period + 2:
-                
+            if len(self.price_history) >= self.recent_high_period + 2:
                 # Check individual conditions
-                ema_current = self.ema.Current.Value
-                prev_close = float(history.iloc[-2]['close'])
-                in_trend = current_price > ema_current and current_price > prev_close
+                ema_current = self.ema_values[-1]
+                prev_price = self.price_history[-2]
+                in_trend = current_price > ema_current and current_price > prev_price
                 
                 is_low_bbw = bb_width < self.bbw_threshold
                 break_above_bb = current_price > bb_upper
                 
-                recent_highs = history['high'].iloc[-(self.recent_high_period+1):-1]
-                recent_high = float(recent_highs.max())
-                break_above_recent_high = current_price > recent_high
+                if len(self.high_history) >= self.recent_high_period + 1:
+                    recent_highs = self.high_history[-(self.recent_high_period+1):-1]
+                    recent_high = max(recent_highs)
+                    break_above_recent_high = current_price > recent_high
+                else:
+                    break_above_recent_high = False
                 
                 # Plot flags (1 when condition is true, 0 otherwise)
                 algorithm.Plot("Entry Conditions", "Trend OK", 1 if in_trend else 0)
@@ -249,7 +276,7 @@ class VolaBreakoutStrategy(IStrategy):
     def on_end_of_algorithm(self, algorithm):
         """Called at the end of the algorithm"""
         final_portfolio_value = algorithm.Portfolio.TotalPortfolioValue
-        algorithm.Log(f"Vola Breakout Strategy completed - Final Portfolio Value: ${final_portfolio_value:,.2f}")
+        algorithm.Log(f"Vola Breakout Strategy ({TIMEFRAME_MINUTES}min) completed - Final Portfolio Value: ${final_portfolio_value:,.2f}")
 
 
 # Create the ActiveStrategy alias for the framework
