@@ -3,27 +3,21 @@ SHELL := powershell.exe
 .SHELLFLAGS := -NoLogo -NoProfile -ExecutionPolicy Bypass -Command
 .ONESHELL:
 
-# Static Variables
-LEAN_EXE := C:\Users\chris\pipx\venvs\lean\Scripts\lean.exe
-
-.PHONY: push backtest copy switch-spy switch-vola list-strategies
+.PHONY: push backtest copy switch-spy switch-vola list-strategies version-update backtest-enhanced dev-backtest test-table
 
 all: test
 
-copy:
-	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
-		$$current = Get-Location; \
-		$$parent = Split-Path -Parent $$current; \
-		$$deployPath = Join-Path $$parent 'QC_Trading_Framework_DEPLOY'; \
-		Write-Host 'Copying essential files from DEV to DEPLOY...'; \
-		if (!(Test-Path $$deployPath)) { New-Item -ItemType Directory -Path $$deployPath -Force }; \
-		Copy-Item -Path 'main.py' -Destination \"$$deployPath\\main.py\" -Force; \
-		Copy-Item -Path 'active_strategy.py' -Destination \"$$deployPath\\active_strategy.py\" -Force; \
-		Copy-Item -Path 'framework' -Destination \"$$deployPath\\framework\" -Recurse -Force; \
-		Copy-Item -Path 'config.json' -Destination \"$$deployPath\\config.json\" -Force; \
-		if (Test-Path 'research.ipynb') { Copy-Item -Path 'research.ipynb' -Destination \"$$deployPath\\research.ipynb\" -Force }; \
-		Write-Host \"Files copied successfully to $$deployPath\" \
-	"
+# Version-controlled backtest with deployment verification
+backtest-enhanced: copy push backtest-verify
+
+version-update:
+	@python make_version_update.py
+
+backtest-verify:
+	@python backtest_with_analysis.py
+
+copy: version-update
+	@python make_copy.py
 
 # Strategy switching commands
 switch-spy:
@@ -41,6 +35,17 @@ switch-vola:
 			Write-Host 'Run \"make push\" to deploy to QuantConnect' \
 		} else { \
 			Write-Host 'ERROR: strategies\\vola_breakout_strategy.py not found' \
+		} \
+	"
+
+switch-mtf:
+	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
+		if (Test-Path 'strategies\\multi_timeframe_ema_strategy.py') { \
+			Copy-Item -Path 'strategies\\multi_timeframe_ema_strategy.py' -Destination 'active_strategy.py' -Force; \
+			Write-Host 'Switched to Multi-Timeframe EMA Strategy'; \
+			Write-Host 'Run \"make push\" to deploy to QuantConnect' \
+		} else { \
+			Write-Host 'ERROR: strategies\\multi_timeframe_ema_strategy.py not found' \
 		} \
 	"
 
@@ -69,20 +74,24 @@ list-strategies:
 
 logs:
 	python "D:\QC\create_readable_logs.py"
+
+pull:
+	@python make_pull.py
 	
 push: copy
-	powershell -NoLogo -NoProfile -ExecutionPolicy Bypass -Command " \
-		$$parent = Split-Path -Parent (Get-Location); \
-		Write-Host \"Pushing QC_Trading_Framework_DEPLOY to QuantConnect...\"; \
-		Set-Location -LiteralPath $$parent; \
-		& '$(LEAN_EXE)' cloud push --project QC_Trading_Framework_DEPLOY \
-	"
+	@python make_push.py
 
 backtest:
-	python backtest_with_analysis.py
+	@python backtest_with_analysis.py
+
+dev-backtest:
+	@python dev_backtest.py
+
+test-table:
+	@python test_table.py
 
 results:
-	python extract_performance.py
+	@python extract_performance.py
 
 calculate-performance:
-	python calculate_performance.py
+	@python calculate_performance.py

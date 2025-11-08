@@ -1,0 +1,3 @@
+from version_control import update_version_with_validation
+
+update_version_with_validation()
