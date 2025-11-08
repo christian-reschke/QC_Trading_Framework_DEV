@@ -1,3 +1,7 @@
+# region imports
+from AlgorithmImports import *
+# endregion
+
 """
 Strategy configuration constants
 """
@@ -6,14 +10,14 @@ Strategy configuration constants
 SYMBOL = "MDB"
 
 # Timeframe configuration - single source of truth
-TIMEFRAME_MINUTES = 15
+TIMEFRAME_MINUTES = 30
 
 # Backtest period configuration - single source of truth
-START_DATE = "2024-01-01"
+START_DATE = "2019-01-01"
 END_DATE = "2024-12-31"
 
 # Starting capital configuration - single source of truth
 STARTING_CAPITAL = 100000
 
 # Version configuration - single source of truth
-STRATEGY_VERSION = "v2.1.50"
+STRATEGY_VERSION = "v2.1.66"

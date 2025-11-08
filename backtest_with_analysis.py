@@ -57,7 +57,7 @@ def parse_backtest_results(output_text):
         # if any(keyword in line for keyword in ['Return', 'Sharpe', 'Drawdown', 'Equity']):
         #     print(f"DEBUG LINE: {line}")
         
-        # Look for Return line in right column - pattern: "| Probabilistic | 75.995% | Return | 24.26 % |"
+        # Look for Return line in right column - pattern: "| Probabilistic | 75.995% | Return | -24.26 % |"
         if '| Return' in line and '%' in line:
             # Split by pipe and find the section with "Return"
             parts = line.split('|')
@@ -65,14 +65,15 @@ def parse_backtest_results(output_text):
                 if 'Return' in part and i + 1 < len(parts):
                     # Get the next part which should contain the percentage
                     value_part = parts[i + 1].strip()
-                    match = re.search(r'(\d+\.\d+)\s*%', value_part)
+                    # Updated regex to handle both integers and decimals (including 0.00%)
+                    match = re.search(r'(-?\d+(?:\.\d+)?)\s*%', value_part)
                     if match:
                         return_val = float(match.group(1)) / 100
                         strategy_metrics['return'] = return_val
                         # print(f"DEBUG: Found return = {return_val} from part: '{value_part}'")
                         break
         
-        # Look for Sharpe Ratio in right column - pattern: "| Net Profit | 24.263% | Sharpe Ratio | 1.162 |"
+        # Look for Sharpe Ratio in right column - pattern: "| Net Profit | 24.263% | Sharpe Ratio | -1.162 |"
         elif '| Sharpe Ratio' in line:
             # Split by pipe and find the section with "Sharpe Ratio"
             parts = line.split('|')
@@ -80,7 +81,8 @@ def parse_backtest_results(output_text):
                 if 'Sharpe Ratio' in part and i + 1 < len(parts):
                     # Get the next part which should contain the decimal value
                     value_part = parts[i + 1].strip()
-                    match = re.search(r'(\d+\.\d+)', value_part)
+                    # Updated regex to handle both integers and decimals (including 0)
+                    match = re.search(r'(-?\d+(?:\.\d+)?)', value_part)
                     if match:
                         sharpe_val = float(match.group(1))
                         strategy_metrics['sharpe'] = sharpe_val
@@ -89,7 +91,8 @@ def parse_backtest_results(output_text):
         
         # Look for Drawdown percentage
         elif '| Drawdown' in line and '%' in line:
-            match = re.search(r'(\d+\.\d+)\s*%', line)
+            # Updated regex to handle both integers and decimals (including 0%)
+            match = re.search(r'(-?\d+(?:\.\d+)?)\s*%', line)
             if match:
                 drawdown_val = float(match.group(1)) / 100
                 strategy_metrics['drawdown'] = drawdown_val
@@ -136,8 +139,12 @@ def run_backtest_with_capture():
         print(f"Executing: {' '.join(cmd)}")
         result = subprocess.run(cmd, text=True, capture_output=True, timeout=300)
         
-        # Print the output for user to see (commented out to reduce terminal noise)
-        # print(result.stdout)
+        # Print the output for user to see
+        print("="*70)
+        print("RAW QUANTCONNECT OUTPUT:")
+        print("="*70)
+        print(result.stdout)
+        print("="*70)
         if result.stderr:
             print("  STDERR:", result.stderr)
         

@@ -3,9 +3,13 @@ SHELL := powershell.exe
 .SHELLFLAGS := -NoLogo -NoProfile -ExecutionPolicy Bypass -Command
 .ONESHELL:
 
-.PHONY: push backtest copy switch-spy switch-vola list-strategies version-update backtest-enhanced dev-backtest test-table
+.PHONY: push backtest copy switch-spy switch-vola list-strategies version-update backtest-enhanced dev-backtest test-table test
 
 all: test
+
+# Run unit tests
+test:
+	cd tests && python run_tests.py
 
 # Version-controlled backtest with deployment verification
 backtest-enhanced: copy push backtest-verify
@@ -77,7 +81,7 @@ logs:
 
 pull:
 	@python make_pull.py
-	
+
 push: copy
 	@python make_push.py
 
