@@ -84,6 +84,16 @@ def copy_files_to_deploy():
     research_src = Path('research.ipynb')
     if research_src.exists():
         shutil.copy2(research_src, deploy_path / 'research.ipynb')
+    
+    # Copy backtest_analysis.ipynb if it exists
+    analysis_src = Path('backtest_analysis.ipynb')
+    if analysis_src.exists():
+        shutil.copy2(analysis_src, deploy_path / 'backtest_analysis.ipynb')
+    
+    # Copy local_quantconnect_guide.ipynb if it exists
+    guide_src = Path('local_quantconnect_guide.ipynb')
+    if guide_src.exists():
+        shutil.copy2(guide_src, deploy_path / 'local_quantconnect_guide.ipynb')
 
 def validate_version_sync():
     """Validate that DEV and DEPLOY versions match after copy"""

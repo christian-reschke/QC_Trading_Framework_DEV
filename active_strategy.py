@@ -21,7 +21,12 @@ Configuration: Change TIMEFRAME_MINUTES in the class to adjust timeframe
 from AlgorithmImports import *
 from framework.interfaces import IStrategy
 from framework.bar_builder import BarBuilder
-from strategy_config import TIMEFRAME_MINUTES, START_DATE, END_DATE, STARTING_CAPITAL, STRATEGY_VERSION, SYMBOL
+from framework.logging_service import BacktestLogger
+from strategy_config import (
+    TIMEFRAME_MINUTES, START_DATE, END_DATE, STARTING_CAPITAL, 
+    STRATEGY_VERSION, SYMBOL, LOGGING_ENABLED, RUN_ID, 
+    LOG_TRADES, LOG_DAILY_PERFORMANCE, LOG_INDICATORS, LOG_ENTRY_CONDITIONS
+)
 
 
 class VolaBreakoutStrategy(IStrategy):
@@ -61,6 +66,19 @@ class VolaBreakoutStrategy(IStrategy):
         # State tracking
         self.position_entry_price = None
         self.highest_price_since_entry = None
+        self.entry_time = None
+        
+        # Initialize logging service
+        self.logger = BacktestLogger(
+            algorithm=algorithm,
+            run_id=RUN_ID,
+            enabled=LOGGING_ENABLED
+        )
+        self.logger.set_metadata(
+            strategy_name="VolaBreakoutStrategy",
+            symbol=SYMBOL,
+            timeframe_minutes=TIMEFRAME_MINUTES
+        )
         
         algorithm.Log(f"VOLA BREAKOUT STRATEGY ({TIMEFRAME_MINUTES}MIN) INITIALIZED - Bar Builder: {TIMEFRAME_MINUTES} minutes")
         algorithm.Log(f"STRATEGY_VERSION: {STRATEGY_VERSION}")  # Version verification
@@ -100,12 +118,41 @@ class VolaBreakoutStrategy(IStrategy):
         # Update indicators
         self._update_indicators(bar)
         
+        # Log indicators if enabled
+        if LOG_INDICATORS and len(self.ema_values) > 0 and len(self.bb_values) > 0:
+            bb_upper, bb_middle, bb_lower = self.bb_values[-1]
+            bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 0
+            
+            indicator_data = {
+                "ema": self.ema_values[-1],
+                "bb_upper": bb_upper,
+                "bb_middle": bb_middle,
+                "bb_lower": bb_lower,
+                "bb_width": bb_width,
+                "price": current_price,
+                "high": bar.High,
+                "low": bar.Low,
+                "volume": bar.Volume if hasattr(bar, 'Volume') else 0
+            }
+            self.logger.log_indicators(indicator_data)
+        
+        # Log daily performance (only once per day)
+        if LOG_DAILY_PERFORMANCE and algorithm.Time.hour == 16 and algorithm.Time.minute == 0:
+            self.logger.log_daily_performance()
+        
         # Plot current data for debugging
         self._plot_debug_data(algorithm, current_price, bar)
         
         # Entry logic
         if current_holdings == 0:
-            if self._check_entry_conditions(current_price, bar):
+            entry_conditions = self._get_entry_conditions_dict(current_price, bar)
+            entry_signal = self._check_entry_conditions(current_price, bar)
+            
+            # Log entry conditions if enabled
+            if LOG_ENTRY_CONDITIONS:
+                self.logger.log_entry_conditions(entry_conditions, entry_signal)
+            
+            if entry_signal:
                 # Calculate position size (99% of portfolio)
                 cash_to_invest = algorithm.Portfolio.Cash * 0.99
                 shares_to_buy = int(cash_to_invest / current_price)
@@ -114,15 +161,43 @@ class VolaBreakoutStrategy(IStrategy):
                     algorithm.MarketOrder(self.symbol, shares_to_buy)
                     self.position_entry_price = current_price
                     self.highest_price_since_entry = current_price
+                    self.entry_time = algorithm.Time
+                    
+                    # Log trade entry
+                    if LOG_TRADES:
+                        self.logger.log_trade_entry(
+                            symbol=self.symbol,
+                            quantity=shares_to_buy,
+                            price=current_price,
+                            entry_conditions=entry_conditions
+                        )
+                    
                     algorithm.Log(f"ENTRY: Bought {shares_to_buy} shares of {SYMBOL} at ${current_price:.2f} ({TIMEFRAME_MINUTES}min bar)")
         
         # Exit logic (trailing stop)
         elif current_holdings > 0:
             if self._check_exit_conditions(current_price):
+                # Calculate hold period
+                hold_days = None
+                if self.entry_time:
+                    hold_days = (algorithm.Time - self.entry_time).days
+                
+                # Log trade exit before liquidating
+                if LOG_TRADES:
+                    self.logger.log_trade_exit(
+                        symbol=self.symbol,
+                        quantity=current_holdings,
+                        price=current_price,
+                        entry_price=self.position_entry_price,
+                        hold_days=hold_days,
+                        exit_reason="trailing_stop"
+                    )
+                
                 algorithm.Liquidate(self.symbol)
                 algorithm.Log(f"EXIT: Sold {SYMBOL} at ${current_price:.2f} (Entry: ${self.position_entry_price:.2f}) ({TIMEFRAME_MINUTES}min bar)")
                 self.position_entry_price = None
                 self.highest_price_since_entry = None
+                self.entry_time = None
             else:
                 # Update highest price for trailing stop
                 if current_price > self.highest_price_since_entry:
@@ -204,6 +279,49 @@ class VolaBreakoutStrategy(IStrategy):
         
         return entry_signal
 
+    def _get_entry_conditions_dict(self, current_price, bar):
+        """Get all entry conditions as a dictionary for logging"""
+        if len(self.ema_values) < 2 or len(self.bb_values) < 1:
+            return {}
+        
+        if len(self.price_history) < self.recent_high_period + 2:
+            return {}
+        
+        # Calculate all conditions
+        ema_current = self.ema_values[-1]
+        prev_price = self.price_history[-2]
+        bb_upper, bb_middle, bb_lower = self.bb_values[-1]
+        bb_width = (bb_upper - bb_lower) / bb_middle if bb_middle > 0 else 1.0
+        
+        # Calculate recent high
+        recent_high = 0
+        if len(self.high_history) >= self.recent_high_period + 1:
+            recent_highs = self.high_history[-(self.recent_high_period+1):-1]
+            recent_high = max(recent_highs)
+        
+        # Individual conditions
+        in_trend = current_price > ema_current and current_price > prev_price
+        is_low_bbw = bb_width < self.bbw_threshold
+        break_above_bb = current_price > bb_upper
+        break_above_recent_high = current_price > recent_high
+        
+        return {
+            "current_price": current_price,
+            "ema_current": ema_current,
+            "prev_price": prev_price,
+            "bb_upper": bb_upper,
+            "bb_middle": bb_middle,
+            "bb_lower": bb_lower,
+            "bb_width": bb_width,
+            "bbw_threshold": self.bbw_threshold,
+            "recent_high": recent_high,
+            "in_trend": in_trend,
+            "is_low_bbw": is_low_bbw,
+            "break_above_bb": break_above_bb,
+            "break_above_recent_high": break_above_recent_high,
+            "all_conditions_met": in_trend and is_low_bbw and break_above_bb and break_above_recent_high
+        }
+
     def _plot_debug_data(self, algorithm, current_price, bar):
         """Plot debugging data to charts"""
         if len(self.ema_values) == 0 or len(self.bb_values) == 0:
@@ -277,6 +395,17 @@ class VolaBreakoutStrategy(IStrategy):
         """Called at the end of the algorithm"""
         final_portfolio_value = algorithm.Portfolio.TotalPortfolioValue
         algorithm.Log(f"Vola Breakout Strategy ({TIMEFRAME_MINUTES}min) completed - Final Portfolio Value: ${final_portfolio_value:,.2f}")
+        
+        # Save all logged data to object store
+        if LOGGING_ENABLED:
+            algorithm.Log("Saving backtest data to object store...")
+            saved = self.logger.save_to_object_store()
+            if saved:
+                algorithm.Log(f"Backtest data saved successfully. Run ID: {self.logger.run_id}")
+            else:
+                algorithm.Log("Failed to save backtest data to object store")
+        else:
+            algorithm.Log("Logging disabled - no data saved to object store")
 
 
 # Create the ActiveStrategy alias for the framework
